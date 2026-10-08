@@ -1,0 +1,20 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Deploy on save (watch)",
+      "type": "shell",
+      "command": "./dev.sh",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "Deploy once",
+      "type": "shell",
+      "command": "./dev.sh once",
+      "problemMatcher": []
+    }
+  ]
+}

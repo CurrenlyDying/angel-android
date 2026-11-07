@@ -4,9 +4,9 @@ The V1 atmosphere is now rebuilt as editable source artwork: a round Moon, petro
 
 ## Wording
 
-**Default: `>CRUEL / >ANGEL / >SYNTHESIS`.** Synthesis retains **thesis** inside the word and connects to generative synthesis and program synthesis. It preserves the sound of the reference while giving it a technical meaning.
+**Selected identity: `>CRUEL / >ANGEL / >SYNTHESIS` (owner choice, 2026-11-07).** Synthesis retains **thesis** inside the word and connects to generative synthesis and program synthesis. It preserves the sound of the reference while giving it a technical meaning.
 
-**Alternative: `>CRUEL / >ANGEL / >INFERENCE`.** The clearest direct AI meaning, with less phonetic similarity. The original THESIS version is also preserved. All three are provided as editable wordmarks; no app name or UI body copy was changed to these taglines.
+**Archived alternative: `>CRUEL / >ANGEL / >INFERENCE`.** The clearest direct AI meaning, with less phonetic similarity. The original THESIS version is also preserved. All three are provided as editable wordmarks; no app name or UI body copy was changed to these taglines.
 
 ## Start here
 

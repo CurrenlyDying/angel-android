@@ -4,7 +4,7 @@ Checkpoint: 2026-11-07. This records the current coverage and proposed release g
 
 ## Current position
 
-- Local changes remain uncommitted. Nothing has been pushed during this testing work.
+- Work is checkpointed on `release/1.1-stabilization`; see `HANDOFF.md` for continuation. Production publication and the remaining release gates are still pending.
 - Debug build passes. The latest JVM results contain 76 passing tests. The final broader device run passed 40 checks with eight opt-in model cases skipped (48 reported), including the three appearance checks and two denial regressions. All 17 focused native checks pass across Gemma, DeepSeek, LFM3 and both Qwen imports. Gemma also passed a greeting with the owner’s saved 16K context, temperature 1.2 and thinking enabled: 84 seconds after loading, 238 seconds for the cold test overall.
 - Lint reports no errors, 53 warnings and two hints after V1 assets (including intentionally unassigned capability icons). Triage relevant warnings; dependency upgrades are not automatically required for this release.
 - Imported model access, missing download detection, download ownership, inference cancellation and interrupted-cache recovery have fixes and regression coverage. Gemma now answers through the actual chat UI. Cold model loading/prompt processing still takes substantial time. Loading is now cancellable, with verified cancellation/reload recovery.

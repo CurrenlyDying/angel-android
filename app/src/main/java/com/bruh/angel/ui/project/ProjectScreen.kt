@@ -233,7 +233,7 @@ fun ProjectScreen(
                 }
 
                 if (existing != null) {
-                    Button(onClick = { vm.setActiveProject(existing); onOpenChat() }, modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = { vm.openProjectInNewChat(existing); onOpenChat() }, modifier = Modifier.fillMaxWidth()) {
                         Text("Open in a new chat")
                     }
                     TextButton(onClick = { confirmDelete = true }, modifier = Modifier.align(Alignment.End)) {

@@ -511,6 +511,26 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { if (!settings.value.provider.isLocal) mcp.prepare() }
     }
 
+    /**
+     * Explicit "Open in a new chat" from the project editor: always starts a fresh chat in
+     * [project], even when it is already active (unlike [setActiveProject], whose same-project
+     * early return would keep showing the previous conversation). The old chat is persisted first.
+     */
+    fun openProjectInNewChat(project: Project) {
+        if (busy.value) return
+        persist()
+        val switching = project.id != activeProject.value?.id
+        activeProject.value = project
+        conversationId = ConversationStore.newId()
+        conversationProjectId = project.id
+        session = null
+        _items.value = emptyList()
+        if (switching) {
+            refreshLinux()
+            viewModelScope.launch { if (!settings.value.provider.isLocal) mcp.prepare() }
+        }
+    }
+
     fun setConnectorEnabled(projectId: String, serverId: String, enabled: Boolean) {
         val project = projects.value.firstOrNull { it.id == projectId } ?: return
         updateProject(project.copy(connectors = if (enabled) project.connectors + serverId else project.connectors - serverId))

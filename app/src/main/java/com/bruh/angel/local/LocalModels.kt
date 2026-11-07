@@ -31,6 +31,18 @@ data class LocalModel(
     enum class Status { DOWNLOADING, VERIFYING, READY, FAILED }
 
     val ready get() = status == Status.READY
+
+    /** Recheck downloaded files without hashing multi-GB models on every launch. */
+    internal fun checkedFile(): LocalModel {
+        if (!ready || source != Source.FILE) return this
+        val file = File(location)
+        val problem = when {
+            !file.isFile || !file.canRead() -> "Model file is missing or unreadable. Download it again or add the file."
+            file.length() < 4 || (size > 0 && file.length() != size) -> "Model file is incomplete. Download it again."
+            else -> null
+        }
+        return if (problem == null) this else copy(status = Status.FAILED, error = problem)
+    }
 }
 
 /** Inference settings for on-device models. */
@@ -82,6 +94,15 @@ class LocalModelStore private constructor(private val context: Context) {
         get() = (context.getExternalFilesDir("models") ?: File(context.filesDir, "models")).apply { mkdirs() }
 
     fun get(id: String): LocalModel? = _models.value.firstOrNull { it.id == id }
+
+    @Synchronized
+    fun refreshFiles() {
+        val checked = _models.value.map { it.checkedFile() }
+        if (checked != _models.value) {
+            write(checked)
+            _models.value = checked
+        }
+    }
 
     @Synchronized
     fun upsert(model: LocalModel) {

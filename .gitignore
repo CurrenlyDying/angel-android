@@ -4,6 +4,14 @@
 /.idea/
 /.agents/
 /.codex/
+/CLAUDE.md
+# Local artwork prompt backups, excluded from published source packages.
+/branding/**/prompts/
+/branding/**/*[Pp][Rr][Oo][Mm][Pp][Tt]*.md
+/branding/**/*[Pp][Rr][Oo][Mm][Pp][Tt]*.txt
+/branding/**/*[Pp][Rr][Oo][Mm][Pp][Tt]*.json
+/app/src/main/assets/**/prompts/
+/app/src/main/assets/**/*[Pp][Rr][Oo][Mm][Pp][Tt]*
 .env
 .env.*
 !.env.example

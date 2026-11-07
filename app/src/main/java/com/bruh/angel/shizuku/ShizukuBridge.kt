@@ -15,9 +15,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import rikka.shizuku.Shizuku
 import java.io.InputStream
 import java.io.OutputStream
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
 class ShizukuBridge(context: Context) {
     private val _status = MutableStateFlow("Shizuku not connected")
@@ -102,10 +108,33 @@ class ShizukuBridge(context: Context) {
             service ?: if (binding) ready.await() else error("Connect Shizuku in Settings first")
         }
     }
-    suspend fun execute(command: String, linux: Boolean, distro: LinuxDistro = LinuxDistro.DEFAULT) =
-        withContext(Dispatchers.IO) { api().execute(command, linux, distro.id) }
+    suspend fun execute(command: String, linux: Boolean, distro: LinuxDistro = LinuxDistro.DEFAULT, workdir: String = "") =
+        withContext(Dispatchers.IO) { api().execute(command, linux, distro.id, workdir) }
     suspend fun readScreen(filter: String): String = withContext(Dispatchers.IO) { api().readScreen(filter) }
     suspend fun cancel() = withContext(Dispatchers.IO) { runCatching { service?.cancel() }; Unit }
+
+    /** Drain script output while it runs, killing it before waiting for a blocked reader on timeout. */
+    suspend fun runLinuxScript(
+        script: String, distro: LinuxDistro, timeoutMs: Long = 15 * 60_000L, onLine: (String) -> Unit = {}
+    ): Int? = coroutineScope {
+        val handle = spawn(script, true, distro, mergeStderr = true)
+        try {
+            val reader = launch(Dispatchers.IO) {
+                BufferedReader(InputStreamReader(handle.stdout, Charsets.UTF_8)).use { input ->
+                    while (true) {
+                        val line = input.readLine() ?: break
+                        if (line.isNotBlank()) onLine(line)
+                    }
+                }
+            }
+            check(withTimeoutOrNull(timeoutMs) { reader.join(); true } == true) { "Script timed out after ${timeoutMs / 1000} seconds" }
+            var exit: Int? = null
+            repeat(50) { if (exit == null) { exit = handle.exitCode(); if (exit == null) delay(100) } }
+            exit
+        } finally {
+            handle.kill()
+        }
+    }
 
     /** Client side of a persistent shell session running in the Shizuku process. */
     class TerminalHandle internal constructor(
@@ -122,13 +151,13 @@ class ShizukuBridge(context: Context) {
         }
     }
 
-    suspend fun openTerminal(linux: Boolean, distro: LinuxDistro = LinuxDistro.DEFAULT): TerminalHandle {
+    suspend fun openTerminal(linux: Boolean, distro: LinuxDistro = LinuxDistro.DEFAULT, workdir: String = ""): TerminalHandle {
         val api = api()
         return withContext(Dispatchers.IO) {
             val toShell = ParcelFileDescriptor.createPipe()   // [0] read end -> service stdin, [1] we write
             val fromShell = ParcelFileDescriptor.createPipe() // [0] we read, [1] write end -> service output
             try {
-                val id = api.openTerminal(linux, distro.id, toShell[0], fromShell[1])
+                val id = api.openTerminal(linux, distro.id, workdir, toShell[0], fromShell[1])
                 TerminalHandle(
                     id,
                     ParcelFileDescriptor.AutoCloseOutputStream(toShell[1]),

@@ -1,5 +1,8 @@
 package com.bruh.angel.ui.mcp
 
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,6 +53,7 @@ import com.bruh.angel.mcp.McpPackage
 import com.bruh.angel.mcp.McpRecipes
 import com.bruh.angel.mcp.McpRuntime
 import com.bruh.angel.ui.components.Callout
+import com.bruh.angel.ui.components.EXTERNAL_CODE_NOTICE
 import com.bruh.angel.ui.components.Hint
 import com.bruh.angel.ui.components.Pill
 import com.bruh.angel.ui.theme.mono
@@ -138,6 +142,7 @@ fun InstallSheet(
                     ". It needs Node.js or Python, which Angel adds if missing. This can take several minutes on a phone.")
                 if (!entry.curated) Callout("Community servers are third-party code. It runs inside Linux with access to files there and to /sdcard. Install only what you trust.")
                 else if (entry.needsNetwork) Hint("This server makes network requests on behalf of the model.")
+                Hint(EXTERNAL_CODE_NOTICE)
                 if (!shizukuConnected) Callout("Connect Shizuku in Settings first.", danger = true)
                 else if (!distroInstalled) Callout("${distro.label} is not installed yet. Set it up in Settings, then come back.", danger = true)
             }
@@ -258,6 +263,7 @@ fun CustomDialog(distro: LinuxDistro, onDismiss: () -> Unit, onAdd: (CustomServe
                 OutlinedTextField(env, { env = it }, label = { Text("Environment (optional)") }, minLines = 2, maxLines = 5,
                     placeholder = { Text("API_KEY=secret") }, textStyle = MaterialTheme.typography.bodySmall.mono(), modifier = Modifier.fillMaxWidth())
                 Callout("Custom servers run arbitrary commands. Only add commands you understand and trust.")
+                Hint("Your command or install script may download software from the sources it selects. $EXTERNAL_CODE_NOTICE")
             }
         },
         confirmButton = {
@@ -270,6 +276,40 @@ fun CustomDialog(distro: LinuxDistro, onDismiss: () -> Unit, onAdd: (CustomServe
 }
 
 data class CustomServer(val name: String, val command: String, val install: String, val runtime: McpRuntime, val env: Map<String, String>)
+
+/** Install an MCP server from a GitHub repo: clone, auto-detect npm/Python, derive the start command. */
+@Composable
+fun GitHubDialog(distro: LinuxDistro, onDismiss: () -> Unit, onAdd: (name: String, url: String, ref: String, subdir: String) -> Unit) {
+    var url by rememberSaveable { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
+    var ref by rememberSaveable { mutableStateOf("") }
+    var subdir by rememberSaveable { mutableStateOf("") }
+    val error = if (url.isBlank()) null else McpRecipes.validateGithub(url, ref, subdir)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Install from GitHub") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(url, { url = it.trim() }, label = { Text("Repository URL") }, singleLine = true,
+                    placeholder = { Text("https://github.com/owner/repo") }, textStyle = MaterialTheme.typography.bodySmall.mono(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false),
+                    modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(name, { name = it.take(60) }, label = { Text("Name (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(ref, { ref = it.trim() }, label = { Text("Branch/tag") }, singleLine = true, modifier = Modifier.weight(1f))
+                    OutlinedTextField(subdir, { subdir = it.trim() }, label = { Text("Subdirectory") }, singleLine = true, modifier = Modifier.weight(1f))
+                }
+                if (error != null) Callout(error, danger = true)
+                Hint("Cloned into ${distro.label}, then installed: npm (package.json) or Python (pyproject/requirements). The detected start command is shown afterwards and can be edited. Only install repositories you trust.")
+                Hint("Sources: your GitHub repository, its npm/Python dependencies and the Linux package repositories. $EXTERNAL_CODE_NOTICE")
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = url.isNotBlank() && error == null, onClick = { onAdd(name.trim(), url.trim(), ref.trim(), subdir.trim()) }) { Text("Install") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
 
 /** Edit credentials of an installed server. */
 @Composable

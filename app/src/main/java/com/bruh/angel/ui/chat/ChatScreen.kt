@@ -129,7 +129,10 @@ fun ChatScreen(
     onKillCommand: () -> Unit = {},
     onNewChat: () -> Unit = {},
     onHistory: () -> Unit = {},
-    onTerminal: () -> Unit = {}
+    onTerminal: () -> Unit = {},
+    onProjects: () -> Unit = {},
+    activeProjectName: String? = null,
+    activity: String = "Thinking…"
 ) {
     var draft by rememberSaveable { mutableStateOf("") }
     var menu by remember { mutableStateOf(false) }
@@ -164,6 +167,19 @@ fun ChatScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
+                        if (activeProjectName != null) {
+                            Spacer(Modifier.height(2.dp))
+                            Row(
+                                Modifier.clickable(onClick = onProjects),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(painterResource(R.drawable.ic_folder_open), contentDescription = null,
+                                    modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(4.dp))
+                                Text(activeProjectName, style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
                     }
                 },
                 navigationIcon = {
@@ -176,6 +192,9 @@ fun ChatScreen(
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(painterResource(R.drawable.ic_more_vert), contentDescription = "Workspace options") }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenuItem(text = { Text("Projects") },
+                                leadingIcon = { Icon(painterResource(R.drawable.ic_folder_open), null) },
+                                onClick = { menu = false; onProjects() })
                             DropdownMenuItem(text = { Text("Terminal") },
                                 leadingIcon = { Icon(painterResource(R.drawable.ic_terminal), null) },
                                 onClick = { menu = false; onTerminal() })
@@ -201,6 +220,7 @@ fun ChatScreen(
                     MessageList(
                         items = items,
                         busy = busy,
+                        activity = activity,
                         awaitingApproval = awaitingApproval,
                         onOpenTool = { detailIndex = it },
                         onKill = onKillCommand
@@ -250,7 +270,7 @@ private fun HomeContent(status: AgentStatus, onPick: (String) -> Unit, onSetting
                 contentAlignment = Alignment.Center
             ) {
                 Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxSize()) {}
-                Icon(painterResource(R.drawable.ic_sparkle), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(30.dp))
+                Icon(painterResource(R.drawable.ic_angel_mark), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(30.dp))
             }
             Spacer(Modifier.height(4.dp))
             Text("A little help.\nA lot of possibility.", style = MaterialTheme.typography.displaySmall, textAlign = TextAlign.Center)
@@ -355,6 +375,7 @@ private fun buildRows(items: List<ChatItem>): List<ChatRow> {
 private fun MessageList(
     items: List<ChatItem>,
     busy: Boolean,
+    activity: String,
     awaitingApproval: Boolean,
     onOpenTool: (Int) -> Unit,
     onKill: () -> Unit,
@@ -368,8 +389,7 @@ private fun MessageList(
         !busy -> null
         last is ChatItem.ToolCall && last.running -> null
         awaitingApproval -> "Waiting for your approval"
-        last is ChatItem.AgentMsg -> "Working…"
-        else -> "Thinking…"
+        else -> activity
     }
     val total = rows.size + (if (indicator != null) 1 else 0)
     val reduceMotion = AngelTheme.preferences.reduceMotion
@@ -449,7 +469,7 @@ private fun AgentMessage(text: String) {
     val isError = text.startsWith("⚠️")
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(painterResource(R.drawable.ic_sparkle), null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            Icon(painterResource(R.drawable.ic_angel_mark), null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Text("Angel", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (isError) {

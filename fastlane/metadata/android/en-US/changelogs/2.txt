@@ -1,0 +1,1 @@
+Projects, Git Changes, SKILL.md skills and GitHub MCP installation. Updated llama.cpp adds LFM3 support and fixes optional Qwen3.5 prediction-layer loading. Improved imported models, Stop/recovery, prompt progress and local connector discovery. Fixed Git paths, download isolation and installer timeouts. Added installation review and bundled license notices.

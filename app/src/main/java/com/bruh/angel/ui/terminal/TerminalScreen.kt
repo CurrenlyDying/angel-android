@@ -100,7 +100,7 @@ private fun linuxQuickCommands(distro: LinuxDistro): List<String> {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TerminalScreen(onBack: () -> Unit, distro: LinuxDistro = LinuxDistro.DEFAULT, vm: TerminalViewModel = viewModel()) {
+fun TerminalScreen(onBack: () -> Unit, distro: LinuxDistro = LinuxDistro.DEFAULT, workdir: String = "", vm: TerminalViewModel = viewModel()) {
     val mode by vm.mode.collectAsStateWithLifecycle()
     val state by vm.state(mode).collectAsStateWithLifecycle()
     val shizuku by vm.bridge.status.collectAsStateWithLifecycle()
@@ -114,6 +114,7 @@ fun TerminalScreen(onBack: () -> Unit, distro: LinuxDistro = LinuxDistro.DEFAULT
     val colors = AngelTheme.colors
 
     LaunchedEffect(distro) { vm.useDistro(distro) }
+    LaunchedEffect(workdir) { vm.useWorkdir(workdir) }
     LaunchedEffect(mode, connected, distro) { if (connected) vm.ensureStarted(mode) }
 
     val submit = {

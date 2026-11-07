@@ -135,7 +135,7 @@ fun LocalModelsScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Hint(
-                    "GGUF models run entirely on this phone with llama.cpp; nothing you type leaves the device. " +
+                    "GGUF inference runs entirely on this phone with llama.cpp. Tools and connectors can still access the network. " +
                         "Small instruction-tuned models (1–4B parameters, Q4_K_M) are the best fit."
                 )
                 if (message.isNotBlank()) Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
@@ -144,7 +144,10 @@ fun LocalModelsScreen(
                 SectionCard(title = "Your models", icon = R.drawable.ic_memory, subtitle = engineSubtitle(engine), trailing = {
                     if (engine is LocalEngine.State.Ready) TextButton(onClick = vm::unload) { Text("Unload") }
                 }) {
-                    if (engine is LocalEngine.State.Loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    (engine as? LocalEngine.State.Loading)?.let { loading ->
+                        if (loading.progress == null) LinearProgressIndicator(Modifier.fillMaxWidth())
+                        else LinearProgressIndicator(progress = { loading.progress / 100f }, modifier = Modifier.fillMaxWidth())
+                    }
                     (engine as? LocalEngine.State.Failed)?.let { Text(it.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                     if (models.isEmpty()) Hint("No models yet. Download one from Hugging Face below or add a .gguf file you already have.")
                     models.sortedByDescending { it.added }.forEach { model ->
@@ -325,7 +328,7 @@ fun LocalModelsScreen(
 
 private fun engineSubtitle(engine: LocalEngine.State): String = when (engine) {
     LocalEngine.State.Idle -> "Nothing loaded. The selected model loads on your first message."
-    is LocalEngine.State.Loading -> "Loading ${engine.name}…"
+    is LocalEngine.State.Loading -> "Loading ${engine.name}" + (engine.progress?.let { " · $it%" } ?: "…")
     is LocalEngine.State.Ready -> "Loaded: ${engine.name} · ${LocalEngine.describe(engine.info)}"
     is LocalEngine.State.Failed -> "Last load failed"
 }

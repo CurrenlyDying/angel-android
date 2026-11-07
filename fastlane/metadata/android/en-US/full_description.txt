@@ -1,0 +1,17 @@
+<p>Angel is a native Android AI assistant for ARM64 phones running Android 8 or newer. Use an on-device GGUF model or configure your own cloud-provider credentials.</p>
+
+<ul>
+<li>Stream replies from local models powered by llama.cpp, with model import and Hugging Face downloads.</li>
+<li>Organize chats into projects with Linux working directories, instructions, skills and MCP connectors.</li>
+<li>Use Android shell commands and read on-screen UI text through Shizuku, without rooting the phone.</li>
+<li>Run Alpine, Debian, Ubuntu or Kali Linux environments under proot, with a persistent terminal.</li>
+<li>Connect to MCP servers or install them from package registries and GitHub repositories.</li>
+<li>Review tool requests, edit command arguments, and configure Ask, Allow or Deny policies.</li>
+<li>Inspect repository diffs, stage changes and create local Git commits.</li>
+</ul>
+
+<p>Shizuku setup is required for phone control and Linux tools. Linux, skill and MCP installation downloads third-party software separately from the app and outside F-Droid's checks. Review the installation disclosures and sources. Proot is not a security sandbox.</p>
+
+<p>Local inference is CPU-only. Supported model architectures and quantizations depend on the bundled runtime; large models may exceed available memory. Split GGUF files and vision models are not supported. Cloud providers and some connectors use proprietary online services. Credentials and model files are supplied by you.</p>
+
+<p>Conversations are stored on the phone. Cloud chats send conversation context and relevant tool output to the selected provider. See the privacy document in the source repository for details.</p>

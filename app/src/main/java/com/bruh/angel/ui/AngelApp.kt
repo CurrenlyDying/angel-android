@@ -32,9 +32,13 @@ import com.bruh.angel.ui.chat.ChatScreen
 import com.bruh.angel.ui.chat.ChatViewModel
 import com.bruh.angel.ui.mcp.McpScreen
 import com.bruh.angel.ui.models.LocalModelsScreen
+import com.bruh.angel.ui.project.ChangesScreen
+import com.bruh.angel.ui.project.ProjectScreen
+import com.bruh.angel.ui.project.ProjectsScreen
+import com.bruh.angel.ui.skills.SkillsScreen
 import com.bruh.angel.ui.terminal.TerminalScreen
 
-enum class Screen { CHAT, TERMINAL, SETTINGS, HISTORY, MODELS, MCP, APPEARANCE }
+enum class Screen { CHAT, TERMINAL, SETTINGS, HISTORY, MODELS, MCP, APPEARANCE, PROJECTS, PROJECT, CHANGES, SKILLS }
 
 @Composable
 fun AngelApp(vm: ChatViewModel) {
@@ -42,6 +46,7 @@ fun AngelApp(vm: ChatViewModel) {
     val reduceMotion = AngelTheme.preferences.reduceMotion
     val items by vm.items.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
+    val activity by vm.activity.collectAsStateWithLifecycle()
     val installing by vm.installing.collectAsStateWithLifecycle()
     val pending by vm.pending.collectAsStateWithLifecycle()
     val notice by vm.notice.collectAsStateWithLifecycle()
@@ -51,6 +56,11 @@ fun AngelApp(vm: ChatViewModel) {
     val shizuku by vm.bridge.status.collectAsStateWithLifecycle()
     val linux by vm.linuxStatus.collectAsStateWithLifecycle()
     val prefs by vm.prefs.collectAsStateWithLifecycle()
+    val projects by vm.projects.collectAsStateWithLifecycle()
+    val activeProject by vm.activeProject.collectAsStateWithLifecycle()
+    val activeDistro by vm.activeDistro.collectAsStateWithLifecycle()
+    var editingProjectId by rememberSaveable { mutableStateOf<String?>(null) }
+    var changesProjectId by rememberSaveable { mutableStateOf<String?>(null) }
 
     val activeLocal = localModels.firstOrNull { it.id == profile.model }
     val modelLabel = if (profile.provider.isLocal) {
@@ -65,7 +75,7 @@ fun AngelApp(vm: ChatViewModel) {
         shizukuConnected = shizuku.startsWith("Connected"),
         linuxReady = linux.startsWith("Ready"),
         local = profile.provider.isLocal,
-        distro = prefs.distro
+        distro = activeDistro
     )
 
     // One-line notices (saved, failed, …) surface as snackbars on whichever screen is open.
@@ -91,6 +101,7 @@ fun AngelApp(vm: ChatViewModel) {
                     items = items,
                     onSend = vm::send,
                     busy = busy || installing,
+                    activity = activity,
                     awaitingApproval = pending != null,
                     status = status,
                     onSettings = { screen = Screen.SETTINGS },
@@ -98,16 +109,19 @@ fun AngelApp(vm: ChatViewModel) {
                     onKillCommand = vm::killCommand,
                     onNewChat = vm::newChat,
                     onHistory = { vm.refreshHistory(); screen = Screen.HISTORY },
-                    onTerminal = { screen = Screen.TERMINAL }
+                    onTerminal = { screen = Screen.TERMINAL },
+                    onProjects = { vm.refreshProjects(); vm.refreshHistory(); screen = Screen.PROJECTS },
+                    activeProjectName = activeProject?.name
                 )
-                Screen.TERMINAL -> TerminalScreen(onBack = { screen = Screen.CHAT }, distro = prefs.distro)
+                Screen.TERMINAL -> TerminalScreen(onBack = { screen = Screen.CHAT }, distro = activeDistro, workdir = activeProject?.workdir.orEmpty())
                 Screen.SETTINGS -> SettingsScreen(
                     vm,
                     onBack = { screen = Screen.CHAT },
                     onOpenTerminal = { screen = Screen.TERMINAL },
                     onOpenModels = { screen = Screen.MODELS },
                     onOpenMcp = { screen = Screen.MCP },
-                    onOpenAppearance = { screen = Screen.APPEARANCE }
+                    onOpenAppearance = { screen = Screen.APPEARANCE },
+                    onOpenSkills = { vm.refreshSkills(); screen = Screen.SKILLS }
                 )
                 Screen.APPEARANCE -> AppearanceScreen(onBack = { screen = Screen.SETTINGS })
                 Screen.HISTORY -> HistoryScreen(vm, onBack = { screen = Screen.CHAT }, onOpen = { vm.openConversation(it); screen = Screen.CHAT })
@@ -116,6 +130,27 @@ fun AngelApp(vm: ChatViewModel) {
                     activeModelId = profile.model.takeIf { profile.provider.isLocal },
                     onUse = vm::useLocalModel,
                     onBack = { screen = Screen.SETTINGS }
+                )
+                Screen.PROJECTS -> ProjectsScreen(
+                    vm,
+                    onBack = { screen = Screen.CHAT },
+                    onNew = { editingProjectId = null; screen = Screen.PROJECT },
+                    onOpenProject = { editingProjectId = it; screen = Screen.PROJECT },
+                    onOpenGeneral = { vm.setActiveProject(null); screen = Screen.CHAT },
+                    onNewSkillProject = { vm.newSkillProject(it); screen = Screen.CHAT }
+                )
+                Screen.SKILLS -> SkillsScreen(vm, onBack = { screen = Screen.SETTINGS })
+                Screen.PROJECT -> ProjectScreen(
+                    vm,
+                    existing = projects.firstOrNull { it.id == editingProjectId },
+                    onBack = { screen = Screen.PROJECTS },
+                    onOpenChat = { screen = Screen.CHAT },
+                    onOpenChanges = { changesProjectId = it; screen = Screen.CHANGES }
+                )
+                Screen.CHANGES -> ChangesScreen(
+                    vm,
+                    project = projects.firstOrNull { it.id == changesProjectId },
+                    onBack = { screen = Screen.PROJECT }
                 )
             }
         }
@@ -128,8 +163,10 @@ fun AngelApp(vm: ChatViewModel) {
         )
     }
     // Settings handles Back itself (to offer saving unsaved changes); Local models returns to Settings.
-    BackHandler(enabled = screen == Screen.TERMINAL || screen == Screen.HISTORY) { screen = Screen.CHAT }
-    BackHandler(enabled = screen == Screen.MODELS || screen == Screen.MCP) { screen = Screen.SETTINGS }
+    BackHandler(enabled = screen == Screen.TERMINAL || screen == Screen.HISTORY || screen == Screen.PROJECTS) { screen = Screen.CHAT }
+    BackHandler(enabled = screen == Screen.MODELS || screen == Screen.MCP || screen == Screen.SKILLS) { screen = Screen.SETTINGS }
+    BackHandler(enabled = screen == Screen.PROJECT) { screen = Screen.PROJECTS }
+    BackHandler(enabled = screen == Screen.CHANGES) { screen = Screen.PROJECT }
 
-    pending?.let { tool -> ApprovalSheet(tool, profile.provider, prefs.distro, onDecision = vm::approve, mcpLabel = vm.mcp.label(tool.name)) }
+    pending?.let { tool -> ApprovalSheet(tool, profile.provider, activeDistro, onDecision = vm::approve, mcpLabel = vm.mcp.label(tool.name)) }
 }

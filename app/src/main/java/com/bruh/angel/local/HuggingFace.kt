@@ -166,9 +166,8 @@ object HuggingFace {
                 throw IOException("Not enough free storage: ${formatBytes(file.size)} needed, ${formatBytes(dir.usableSpace)} free.")
             }
             val (url, etag) = resolve(repo, file.path, token)
-            val safeName = (repo.replace('/', '_') + "_" + file.name).replace(Regex("[^A-Za-z0-9._-]"), "_")
-            val target = File(dir, safeName)
-            target.delete()
+            val modelId = LocalModelStore.newId()
+            val target = downloadTarget(dir, modelId, repo, file)
             val request = DownloadManager.Request(Uri.parse(url))
                 .setTitle(file.name)
                 .setDescription("Angel model download · $repo")
@@ -178,7 +177,7 @@ object HuggingFace {
                 .setDestinationUri(Uri.fromFile(target))
             val id = (context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
             val model = LocalModel(
-                id = LocalModelStore.newId(),
+                id = modelId,
                 name = file.name.removeSuffix(".gguf").removeSuffix(".GGUF"),
                 source = LocalModel.Source.FILE,
                 location = target.path,
@@ -193,6 +192,12 @@ object HuggingFace {
         }
 
     data class Progress(val downloaded: Long, val total: Long, val status: Int, val reason: Int)
+
+    /** Every entry owns its file: retrying/cancelling a download cannot erase another model. */
+    internal fun downloadTarget(directory: File, id: String, repo: String, file: HfFile): File {
+        val safeName = (repo.replace('/', '_') + "_" + file.name).replace(Regex("[^A-Za-z0-9._-]"), "_")
+        return File(directory, "${id}_$safeName")
+    }
 
     fun progress(context: Context, downloadId: Long): Progress? {
         val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
@@ -233,6 +238,7 @@ object HuggingFace {
 
     private suspend fun reconcileLocked(context: Context) {
         val store = LocalModelStore.get(context)
+        store.refreshFiles()
         for (model in store.models.value.filter { it.status == LocalModel.Status.DOWNLOADING || it.status == LocalModel.Status.VERIFYING }) {
             val p = progress(context, model.downloadId)
             when {

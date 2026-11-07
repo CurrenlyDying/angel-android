@@ -6,18 +6,23 @@
 #include <android/log.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <exception>
+#include <cstdio>
+#include <cstring>
 #include <memory>
 #include <mutex>
 #include <set>
 #include <string>
 #include <vector>
+#include <unistd.h>
 
 #include "chat.h"
 #include "common.h"
 #include "ggml-backend.h"
+#include "gguf.h"
 #include "llama.h"
 #include "sampling.h"
 
@@ -27,11 +32,16 @@
 
 namespace {
 
+using ModelFile = std::unique_ptr<FILE, decltype(&std::fclose)>;
+thread_local std::string model_load_errors;
+
 struct Engine {
     llama_model *               model = nullptr;
     llama_context *             ctx   = nullptr;
+    ModelFile                   source_file{nullptr, &std::fclose};
     common_chat_templates_ptr   templates;
     common_chat_params          chat;          // result of the last prepare(): format, stops, parser
+    common_chat_input           generated;     // output bytes and their original token identities
     std::vector<llama_token>    cached;        // tokens currently in the KV cache (sequence 0)
     std::set<llama_token>       preserved;     // special tokens the tool-call parser must see
     std::atomic<bool>           cancel{false};
@@ -45,8 +55,21 @@ struct SamplerDeleter {
     void operator()(common_sampler * s) const { common_sampler_free(s); }
 };
 
+// Decode may leave completed micro-batches behind on abort. Keep only the prefix we committed
+// to cached; recurrent backends that cannot roll back safely fall back to a full reset.
+void rollback_interrupted_decode(Engine * e) {
+    llama_memory_t memory = llama_get_memory(e->ctx);
+    if (!llama_memory_seq_rm(memory, 0, static_cast<llama_pos>(e->cached.size()), -1)) {
+        llama_memory_clear(memory, true);
+        e->cached.clear();
+    }
+}
+
 void log_callback(ggml_log_level level, const char * text, void *) {
-    if (level == GGML_LOG_LEVEL_ERROR) __android_log_print(ANDROID_LOG_ERROR, TAG, "%s", text);
+    if (level == GGML_LOG_LEVEL_ERROR) {
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "%s", text);
+        if (model_load_errors.size() < 2048) model_load_errors.append(text, std::min<size_t>(std::strlen(text), 2048 - model_load_errors.size()));
+    }
     else if (level == GGML_LOG_LEVEL_WARN) __android_log_print(ANDROID_LOG_WARN, TAG, "%s", text);
 }
 
@@ -104,7 +127,7 @@ Java_com_bruh_angel_local_LlamaNative_initBackend(JNIEnv * env, jclass, jstring 
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_bruh_angel_local_LlamaNative_load(JNIEnv * env, jclass, jstring jpath, jint n_ctx, jint n_threads) {
+Java_com_bruh_angel_local_LlamaNative_load(JNIEnv * env, jclass, jstring jpath, jint n_ctx, jint n_threads, jint borrowed_fd, jobject progress, jboolean repack) {
     const std::string path = from_jstring(env, jpath);
     if (ggml_backend_reg_count() == 0) {
         throw_java(env, "No llama.cpp CPU backend could be loaded on this device.");
@@ -112,17 +135,101 @@ Java_com_bruh_angel_local_LlamaNative_load(JNIEnv * env, jclass, jstring jpath, 
     }
     llama_model_params mparams = llama_model_default_params();
     mparams.n_gpu_layers = 0; // CPU only
-    llama_model * model = llama_model_load_from_file(path.c_str(), mparams);
+    mparams.use_extra_bufts = repack;
+    struct LoadProgress {
+        JNIEnv * env;
+        jobject listener;
+        jmethodID method;
+        bool cancelled = false;
+    } loading{env, progress, progress ? env->GetMethodID(env->GetObjectClass(progress), "onProgress", "(II)Z") : nullptr};
+    if (progress) {
+        // In this pinned runtime load_all_data invokes progress on the calling loading thread.
+        mparams.progress_callback_user_data = &loading;
+        mparams.progress_callback = [](float fraction, void * data) {
+            auto * p = static_cast<LoadProgress *>(data);
+            const int percent = std::clamp(static_cast<int>(fraction * 100), 0, 100);
+            const bool keep_going = p->env->CallBooleanMethod(p->listener, p->method, percent, 100);
+            if (p->env->ExceptionCheck()) {
+                p->env->ExceptionClear();
+                p->cancelled = true;
+            } else if (!keep_going) {
+                p->cancelled = true;
+            }
+            return !p->cancelled;
+        };
+    }
+    ModelFile source_file(nullptr, &std::fclose);
+    if (borrowed_fd >= 0) {
+        // Document grants permit using the open descriptor, not reopening its backing path.
+        const int fd = dup(borrowed_fd);
+        if (fd >= 0) source_file.reset(fdopen(fd, "rb"));
+        if (!source_file) {
+            if (fd >= 0) close(fd);
+            throw_java(env, "Could not open the selected model's file descriptor. Add the file again.");
+            return 0;
+        }
+        if (fseeko(source_file.get(), 0, SEEK_SET) != 0) {
+            throw_java(env, "The selected model cannot be read in place. Choose a GGUF saved on this phone.");
+            return 0;
+        }
+    }
+    // Gemma 4 can reuse a huge Q6_K token embedding as its output projection. Repacking that
+    // duplicated tensor took almost a minute on the test phone. Keep this embedding in its
+    // original CPU/mmap layout; the remaining matrix weights still use optimized buffers.
+    std::array<llama_model_tensor_buft_override, 2> embedding_buffers{{
+        {"^(token_embd|output)\\.weight$", nullptr}, {nullptr, nullptr}
+    }};
+    if (repack) {
+        ModelFile inspection(nullptr, &std::fclose);
+        FILE * file = source_file.get();
+        if (!file) {
+            inspection.reset(std::fopen(path.c_str(), "rb"));
+            file = inspection.get();
+        }
+        if (file) {
+            std::unique_ptr<gguf_context, decltype(&gguf_free)> metadata(
+                gguf_init_from_file_ptr(file, {true, nullptr}), &gguf_free);
+            std::rewind(file);
+            if (metadata) {
+                const auto arch = gguf_find_key(metadata.get(), "general.architecture");
+                const auto embedding = gguf_find_tensor(metadata.get(), "token_embd.weight");
+                if (arch >= 0 && gguf_get_kv_type(metadata.get(), arch) == GGUF_TYPE_STRING &&
+                        std::strcmp(gguf_get_val_str(metadata.get(), arch), "gemma4") == 0 &&
+                        embedding >= 0 && gguf_get_tensor_type(metadata.get(), embedding) == GGML_TYPE_Q6_K) {
+                    if (auto * cpu = ggml_backend_dev_by_type(GGML_BACKEND_DEVICE_TYPE_CPU)) {
+                        embedding_buffers[0].buft = ggml_backend_dev_buffer_type(cpu);
+                        mparams.tensor_buft_overrides = embedding_buffers.data();
+                        LOGI("Keeping Gemma 4 Q6_K token/output embeddings in their original CPU layout");
+                    }
+                }
+            }
+        }
+    }
+    model_load_errors.clear();
+    llama_model * model = source_file
+        ? llama_model_load_from_file_ptr(source_file.get(), mparams)
+        : llama_model_load_from_file(path.c_str(), mparams);
     if (!model) {
-        throw_java(env, "Could not load the model. The file may be corrupt, not a GGUF, use an architecture this llama.cpp "
-                        "version doesn't support, or need more memory than is free.");
+        if (loading.cancelled) {
+            throw_java(env, "Model loading stopped.");
+            return 0;
+        }
+        std::string reason = model_load_errors;
+        const std::string marker = "error loading model: ";
+        const auto start = reason.find(marker);
+        if (start != std::string::npos) reason = reason.substr(start + marker.size());
+        const auto end = reason.find('\n');
+        if (end != std::string::npos) reason.resize(end);
+        if (reason.size() > 400) reason.resize(400);
+        throw_java(env, reason.empty() ? "Could not load this GGUF. Check its format, runtime compatibility and available memory."
+                                     : "Could not load the model: " + reason);
         return 0;
     }
     llama_context_params cparams = llama_context_default_params();
     const int train = llama_model_n_ctx_train(model);
     cparams.n_ctx           = static_cast<uint32_t>(train > 0 ? std::min<int>(n_ctx, train) : n_ctx);
-    cparams.n_batch         = 512;
-    cparams.n_ubatch        = 512;
+    cparams.n_batch         = 128;
+    cparams.n_ubatch        = 32;
     cparams.n_threads       = n_threads;
     cparams.n_threads_batch = n_threads;
     cparams.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_AUTO;
@@ -136,6 +243,10 @@ Java_com_bruh_angel_local_LlamaNative_load(JNIEnv * env, jclass, jstring jpath, 
     auto * e  = new Engine();
     e->model  = model;
     e->ctx    = ctx;
+    e->source_file = std::move(source_file);
+    llama_set_abort_callback(ctx, [](void * data) {
+        return static_cast<Engine *>(data)->cancel.load();
+    }, e);
     try {
         e->templates = common_chat_templates_init(model, ""); // model's own template; ChatML if it has none
     } catch (const std::exception & ex) {
@@ -197,7 +308,7 @@ Java_com_bruh_angel_local_LlamaNative_prepare(JNIEnv * env, jclass, jlong handle
             const auto ids = common_tokenize(e->ctx, token, false, true);
             if (ids.size() == 1) e->preserved.insert(ids[0]);
         }
-        return to_bytes(env, e->chat.prompt);
+        return to_bytes(env, e->chat.prompt.str());
     } catch (const std::exception & ex) {
         throw_java(env, std::string("Chat template error: ") + ex.what());
         return nullptr;
@@ -209,13 +320,16 @@ Java_com_bruh_angel_local_LlamaNative_prepare(JNIEnv * env, jclass, jlong handle
 JNIEXPORT jbyteArray JNICALL
 Java_com_bruh_angel_local_LlamaNative_generate(JNIEnv * env, jclass, jlong handle, jbyteArray jprompt, jint max_tokens,
                                               jfloat temp, jfloat top_p, jint top_k, jfloat min_p, jint seed,
-                                              jobject listener) {
+                                              jobject listener, jobject progress) {
     Engine * e = engine(handle);
-    e->cancel = false;
     e->stop_reason = "length";
     e->n_generated = 0;
+    e->prompt_ms = 0;
+    e->gen_ms = 0;
+    e->generated = {};
     jmethodID on_token = nullptr;
     if (listener) on_token = env->GetMethodID(env->GetObjectClass(listener), "onToken", "([B)Z");
+    jmethodID on_progress = progress ? env->GetMethodID(env->GetObjectClass(progress), "onProgress", "(II)Z") : nullptr;
 
     const std::string prompt = from_bytes(env, jprompt);
     std::vector<llama_token> tokens;
@@ -250,14 +364,29 @@ Java_com_bruh_angel_local_LlamaNative_generate(JNIEnv * env, jclass, jlong handl
     e->n_reused = static_cast<int>(keep);
 
     const auto t_prompt = std::chrono::steady_clock::now();
+    LOGI("prompt: tokens=%d reused=%d context=%d", e->n_prompt, e->n_reused, n_ctx);
     const int n_batch = static_cast<int>(llama_n_batch(e->ctx));
+    const auto report_progress = [&](int done) {
+        if (!on_progress) return !e->cancel.load();
+        const bool keep_going = env->CallBooleanMethod(progress, on_progress, done, static_cast<jint>(tokens.size()));
+        if (env->ExceptionCheck()) { env->ExceptionClear(); e->cancel = true; }
+        if (!keep_going) e->cancel = true;
+        return !e->cancel.load();
+    };
     for (size_t i = keep; i < tokens.size(); i += n_batch) {
-        if (e->cancel) {
+        if (!report_progress(static_cast<int>(i))) {
             e->stop_reason = "cancelled";
+            e->prompt_ms = ms_since(t_prompt);
             return to_bytes(env, "");
         }
         const int n = static_cast<int>(std::min<size_t>(n_batch, tokens.size() - i));
         if (llama_decode(e->ctx, llama_batch_get_one(tokens.data() + i, n)) != 0) {
+            if (e->cancel) {
+                rollback_interrupted_decode(e);
+                e->stop_reason = "cancelled";
+                e->prompt_ms = ms_since(t_prompt);
+                return to_bytes(env, "");
+            }
             llama_memory_clear(mem, true);
             e->cached.clear();
             throw_java(env, "Prompt processing failed (out of memory?)");
@@ -266,6 +395,7 @@ Java_com_bruh_angel_local_LlamaNative_generate(JNIEnv * env, jclass, jlong handl
         e->cached.insert(e->cached.end(), tokens.begin() + static_cast<long>(i), tokens.begin() + static_cast<long>(i + n));
     }
     e->prompt_ms = ms_since(t_prompt);
+    report_progress(static_cast<int>(tokens.size()));
 
     common_params_sampling sparams;
     sparams.temp  = temp;
@@ -291,12 +421,18 @@ Java_com_bruh_angel_local_LlamaNative_generate(JNIEnv * env, jclass, jlong handl
         if (llama_vocab_is_eog(vocab, id)) { e->stop_reason = "eos"; break; }
 
         std::string piece = common_token_to_piece(e->ctx, id, e->preserved.count(id) > 0);
-        if (llama_decode(e->ctx, llama_batch_get_one(&id, 1)) != 0) { e->stop_reason = "error"; break; }
+        if (llama_decode(e->ctx, llama_batch_get_one(&id, 1)) != 0) {
+            if (e->cancel) rollback_interrupted_decode(e);
+            else { llama_memory_clear(mem, true); e->cached.clear(); }
+            e->stop_reason = e->cancel ? "cancelled" : "error";
+            break;
+        }
         e->cached.push_back(id);
         e->n_generated++;
 
         const size_t before = output.size();
         output += piece;
+        e->generated.append(piece, id);
         bool stopped = false;
         for (const auto & stop : e->chat.additional_stops) {
             if (stop.empty()) continue;
@@ -307,7 +443,11 @@ Java_com_bruh_angel_local_LlamaNative_generate(JNIEnv * env, jclass, jlong handl
                 stopped = true;
             }
         }
-        if (stopped) { e->stop_reason = "stop"; break; }
+        if (stopped) {
+            e->generated.truncate(output.size());
+            e->stop_reason = "stop";
+            break;
+        }
 
         if (on_token) {
             jbyteArray bytes = to_bytes(env, piece);
@@ -328,10 +468,17 @@ Java_com_bruh_angel_local_LlamaNative_parse(JNIEnv * env, jclass, jlong handle, 
     const std::string raw = from_bytes(env, jraw);
     try {
         common_chat_parser_params params(e->chat);
-        if (!e->chat.parser.empty()) params.parser.load(e->chat.parser);
-        params.reasoning_format = COMMON_REASONING_FORMAT_AUTO;
-        params.parse_tool_calls = true;
-        const common_chat_msg msg = common_chat_parse(raw, partial, params);
+        params.parser = e->chat.parser;
+        const llama_vocab * vocab = llama_model_get_vocab(e->model);
+        params.generation_prompt = common_chat_input_tokenize(vocab, e->chat.generation_prompt);
+        // v0.8 parsers distinguish special token IDs from ordinary text spelling the same marker.
+        // Keep the actual generated IDs for streamed prefixes and the final reply; retokenization
+        // is only a fallback for callers explicitly parsing text that this engine did not generate.
+        const common_chat_input input = raw.size() <= e->generated.size() &&
+                e->generated.text.compare(0, raw.size(), raw) == 0
+            ? e->generated.substr(0, raw.size())
+            : common_chat_input_tokenize(vocab, raw);
+        const common_chat_msg msg = common_chat_parse(input, partial, params);
         return to_bytes(env, msg.to_json_oaicompat().dump_safe());
     } catch (const std::exception & ex) {
         LOGW("parse failed: %s", ex.what());
@@ -343,6 +490,12 @@ JNIEXPORT void JNICALL
 Java_com_bruh_angel_local_LlamaNative_cancel(JNIEnv *, jclass, jlong handle) {
     Engine * e = engine(handle);
     if (e) e->cancel = true;
+}
+
+JNIEXPORT void JNICALL
+Java_com_bruh_angel_local_LlamaNative_resetCancel(JNIEnv *, jclass, jlong handle) {
+    Engine * e = engine(handle);
+    if (e) e->cancel = false;
 }
 
 JNIEXPORT void JNICALL

@@ -26,6 +26,6 @@ Node downloads have a SHA-256 pin; distro package managers verify their own repo
 
 ## Build and eligibility
 
-Local source/APK scans, metadata lint and a full recipe build pass with fdroidserver 2.4.5 and the documented installed toolchain. Independent unsigned builds and signature copying have also matched. Repeat against the final source; a dedicated F-Droid build-server run is still required.
+Local source/APK scans, metadata lint and a full recipe build pass with fdroidserver 2.4.5 and the documented installed toolchain. Independent unsigned builds and signature copying have also matched. The final application source passed a new full recipe build/source/APK scan; its unsigned APK matches the local build, and signature copying produces an identical signed APK. A dedicated F-Droid build-server run is still required.
 
 Public development history is under three months. The existing public release and its users may support the policy's established-user exception; acceptance is not guaranteed. Submission needs the public version tag and matching signed asset first.

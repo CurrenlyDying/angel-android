@@ -61,7 +61,7 @@ private class ToolRequestDenied(val blocked: Boolean = false) : Exception()
  * starts so that editing the active project while a request is in flight (for example while a
  * tool awaits approval) cannot redirect that request's commands into the new directory/distro.
  */
-private data class RequestContext(val distro: LinuxDistro, val workdir: String)
+private data class RequestContext(val distro: LinuxDistro, val workdir: String, val project: Project?)
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val store = ProviderSettingsStore(application)
@@ -72,7 +72,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val activeProject = MutableStateFlow<Project?>(null)
     /** Available skills: built-ins (bodies from assets) overlaid with saved state, plus imported ones. */
     val skills = MutableStateFlow<List<Skill>>(emptyList())
-    val mcp = McpManager(bridge, store, viewModelScope, { activeDistroValue() }, { activeProject.value?.connectors })
+    @Volatile private var runningContext: RequestContext? = null
+    private fun agentProject(): Project? {
+        val context = runningContext
+        return if (context == null) activeProject.value else context.project
+    }
+    val mcp = McpManager(bridge, store, viewModelScope,
+        { runningContext?.distro ?: activeDistroValue() }, { agentProject()?.connectors })
 
     private val _items = MutableStateFlow<List<ChatItem>>(emptyList())
     val items = _items.asStateFlow()
@@ -344,7 +350,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         launchWork {
             val tool = RequestedTool("manual", if (linux) ToolNames.LINUX else ToolNames.ANDROID,
                 if (linux) "uname -m; head -n 2 /etc/os-release; id" else "id")
-            execute(tool, tool.command, RequestContext(activeDistroValue(), activeProject.value?.workdir.orEmpty()))
+            execute(tool, tool.command, RequestContext(activeDistroValue(), activeProject.value?.workdir.orEmpty(), activeProject.value))
         }
     }
 
@@ -492,6 +498,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteProject(id: String) {
+        if (busy.value && activeProject.value?.id == id) {
+            notice.value = "Stop the current request before deleting its project."
+            return
+        }
         viewModelScope.launch {
             // Return this project's chats to "general" so they are not orphaned by the deletion.
             withContext(Dispatchers.IO) {
@@ -868,7 +878,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         val earlier = _items.value
         // Pin this request's shell context: project edits while it runs must not redirect its commands.
-        val context = RequestContext(activeDistroValue(), activeProject.value?.workdir.orEmpty())
+        val context = RequestContext(activeDistroValue(), activeProject.value?.workdir.orEmpty(), activeProject.value)
+        runningContext = context
         _items.update { it + ChatItem.UserMsg(message) }
         persist()
         launchWork {
@@ -1025,9 +1036,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         append("Current device context:\n")
         append("- Phone: ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}).\n")
         append("- Shizuku: ${bridge.status.value}.\n")
-        val distro = activeDistroValue()
+        val distro = runningContext?.distro ?: activeDistroValue()
         append("- Linux environment (linux_shell): ${distro.label}, ${linuxStatus.value.lineSequence().firstOrNull().orEmpty()}. ${distro.agentHint}\n")
-        val project = activeProject.value
+        val project = agentProject()
         if (project != null) {
             append("- Project: \"${project.name}\". linux_shell and the terminal run in the working directory ${project.workdir} (relative paths are resolved there).")
             if (project.repoUrl.isNotBlank()) append(" It is a git checkout of ${project.repoUrl}.")
@@ -1097,6 +1108,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 partialIndex = null
                 pending.value = null
                 approval = null
+                runningContext = null
                 busy.value = false
                 persist()
             }

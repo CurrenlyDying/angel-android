@@ -12,6 +12,8 @@ import com.bruh.angel.agent.ModelReply
 import com.bruh.angel.agent.RequestedTool
 import com.bruh.angel.linuxenv.LinuxDistro
 import com.bruh.angel.local.LocalModelStore
+import com.bruh.angel.mcp.McpKind
+import com.bruh.angel.mcp.McpServerConfig
 import com.bruh.angel.model.AgentPrefs
 import com.bruh.angel.model.ChatItem
 import com.bruh.angel.model.ConversationStore
@@ -193,7 +195,8 @@ class ProjectChatContextTest {
         val viewModels = ViewModelStore()
         val project = Project(
             id = Project.newId(), name = "Release QA context",
-            workdir = "/original", distroId = LinuxDistro.DEBIAN.id
+            workdir = "/original", distroId = LinuxDistro.DEBIAN.id,
+            connectors = setOf("original")
         )
         val (vm, _) = seededViewModel(instrumentation, real, directory, project, viewModels)
         try {
@@ -214,9 +217,27 @@ class ProjectChatContextTest {
 
             // While the approval is pending, save a different workdir and distro for the same project.
             instrumentation.runOnMainSync {
-                vm.updateProject(project.copy(workdir = "/redirected", distroId = LinuxDistro.KALI.id))
+                // Do not start real servers: inspect the actual discovery surface while this
+                // scripted request is paused. Local profile suppresses background preparation.
+                vm.settings.value = ProviderSettings(Provider.LOCAL, "fixture-model", "")
+                vm.mcp.add(McpServerConfig("original", "Original connector", McpKind.REMOTE, url = "http://127.0.0.1:1/mcp"))
+                vm.mcp.add(McpServerConfig("redirected", "Redirected connector", McpKind.REMOTE, url = "http://127.0.0.1:1/mcp"))
+                vm.updateProject(project.copy(workdir = "/redirected", distroId = LinuxDistro.KALI.id,
+                    connectors = setOf("redirected")))
             }
             withTimeout(10_000) { vm.activeProject.first { it?.workdir == "/redirected" } }
+            val discovery = vm.mcp.localExternalTools.list().single().description
+            assertTrue(discovery, discovery.contains("Original connector"))
+            assertFalse(discovery, discovery.contains("Redirected connector"))
+            val selectedDistro = vm.mcp.javaClass.getDeclaredField("selectedDistro").apply { isAccessible = true }
+            @Suppress("UNCHECKED_CAST")
+            val distroForServer = selectedDistro.get(vm.mcp) as () -> LinuxDistro
+            assertEquals(LinuxDistro.DEBIAN, distroForServer())
+
+            // Deletion must not orphan a request or leave its active project stale.
+            instrumentation.runOnMainSync { vm.deleteProject(project.id) }
+            assertTrue(vm.projects.value.any { it.id == project.id })
+            assertTrue(vm.notice.value.contains("Stop the current request"))
 
             instrumentation.runOnMainSync {
                 vm.approve(ChatViewModel.Approval(true, "printf MARKER", always = false))
@@ -232,6 +253,8 @@ class ProjectChatContextTest {
             assertEquals("The request completed after the tool result", 2, model.turns)
             assertEquals(1, model.resultBatches)
             assertTrue(vm.items.value.filterIsInstance<ChatItem.AgentMsg>().any { it.text == "done" })
+            assertEquals(LinuxDistro.KALI, distroForServer())
+            assertTrue(vm.mcp.localExternalTools.list().single().description.contains("Redirected connector"))
         } finally {
             instrumentation.runOnMainSync { viewModels.clear() }
         }

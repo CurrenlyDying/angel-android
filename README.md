@@ -35,6 +35,12 @@ Settings → **On-device** → **Manage local models**.
 - Good starting points: instruction-tuned models of 0.6–4B parameters in Q4_K_M / Q4_0 (e.g. Qwen3, Llama 3.2 3B, Gemma, Phi mini). Tiny models (<1B) call tools but reason weakly.
 - Limits: one model loaded at a time; no GPU/NPU offload; split (multi-part) GGUF files and vision projectors aren't supported yet; models larger than ~70% of RAM are refused.
 
+## Tested local models and compatibility
+
+Device validation used a Pixel 10 Pro Fold on Android API 37. The tested imports were LFM3-1.7B Q6_K, a DeepSeek-labeled Qwen3.5 Q8_0, Qwen3.5 coder Q4_K_M, Qwen3-0.6B Q4_0 and Gemma 4 E4B (a mixed-quantization Q4_K_M file). Loading, generation and cancellation/recovery passed for these files; this does not establish compatibility with every conversion or quantization. Actual connector execution was also demonstrated with LFM3. Tiny-model answers and tool choices can be unreliable.
+
+Gemma's saved-settings greeting took 84 seconds after loading, and about four minutes for the whole cold test. Stop is cancellable, but large CPU-only models remain slow. Android 8 is the minimum SDK; older Android versions and devices have not received the same hardware coverage. Live cloud-provider credentials were not used in release validation; adapter contracts use fixture responses.
+
 ## Fixes in this version
 
 - Downloaded local models whose files were removed or truncated are marked unavailable. Each new download owns a separate file, so retrying or cancelling one cannot delete another model.

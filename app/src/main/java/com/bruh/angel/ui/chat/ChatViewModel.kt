@@ -2,6 +2,7 @@ package com.bruh.angel.ui.chat
 
 import android.app.Application
 import android.os.Build
+import android.os.Bundle
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.bruh.angel.agent.ChatModel
@@ -54,6 +55,13 @@ import java.util.Date
 import kotlin.concurrent.thread
 
 private class ToolRequestDenied(val blocked: Boolean = false) : Exception()
+
+/**
+ * Distro and working directory a request's shell commands run in. Captured when the request
+ * starts so that editing the active project while a request is in flight (for example while a
+ * tool awaits approval) cannot redirect that request's commands into the new directory/distro.
+ */
+private data class RequestContext(val distro: LinuxDistro, val workdir: String)
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val store = ProviderSettingsStore(application)
@@ -336,7 +344,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         launchWork {
             val tool = RequestedTool("manual", if (linux) ToolNames.LINUX else ToolNames.ANDROID,
                 if (linux) "uname -m; head -n 2 /etc/os-release; id" else "id")
-            execute(tool, tool.command)
+            execute(tool, tool.command, RequestContext(activeDistroValue(), activeProject.value?.workdir.orEmpty()))
         }
     }
 
@@ -811,6 +819,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Shell execution seam; instrumented tests substitute a recorder to observe the context a command runs in. */
+    private var shellExecutor: suspend (command: String, linux: Boolean, distro: LinuxDistro, workdir: String) -> Bundle =
+        { command, linux, distro, workdir -> bridge.execute(command, linux, distro, workdir) }
+
     @Volatile private var partialIndex: Int? = null
 
     /** Shows streamed text from an on-device model in a placeholder message. */
@@ -855,6 +867,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         val earlier = _items.value
+        // Pin this request's shell context: project edits while it runs must not redirect its commands.
+        val context = RequestContext(activeDistroValue(), activeProject.value?.workdir.orEmpty())
         _items.update { it + ChatItem.UserMsg(message) }
         persist()
         launchWork {
@@ -870,7 +884,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val reply = model.next { partial -> showPartial(partial) }
                 finishReply(reply.text.trim())
                 if (reply.tools.isEmpty()) return@launchWork
-                val results = reply.tools.map { tool -> tool to runTool(tool) }
+                val results = reply.tools.map { tool -> tool to runTool(tool, context) }
                 model.results(results)
                 persist()
             }
@@ -879,14 +893,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun runTool(tool: RequestedTool): String {
+    private suspend fun runTool(tool: RequestedTool, context: RequestContext): String {
         if (tool.name.startsWith("mcp__")) return runMcpTool(tool)
         when (prefs.value.policy(tool.name)) {
             ToolPolicy.DENY -> {
                 _items.update { it + ChatItem.ToolCall(label(tool, tool.command), "Blocked by Settings (${ToolNames.label(tool.name)}: Deny).", 126) }
                 throw ToolRequestDenied(blocked = true)
             }
-            ToolPolicy.ALLOW -> return execute(tool, tool.command)
+            ToolPolicy.ALLOW -> return execute(tool, tool.command, context)
             ToolPolicy.ASK -> {
                 val decision = CompletableDeferred<Approval>().also { approval = it }
                 pending.value = tool
@@ -900,7 +914,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 if (tool.name != ToolNames.SCREEN && (command.isEmpty() || command.length > 8000)) {
                     return "The user cleared the command; nothing was executed."
                 }
-                val output = execute(tool, command)
+                val output = execute(tool, command, context)
                 return if (command != tool.command.trim()) "Note: the user edited the command before running it. Executed: $command\n$output" else output
             }
         }
@@ -970,7 +984,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private fun label(tool: RequestedTool, command: String) =
         if (tool.name == ToolNames.SCREEN) "read_screen" + (if (command.isBlank()) "" else ": $command") else "${tool.name}: $command"
 
-    private suspend fun execute(tool: RequestedTool, command: String): String {
+    private suspend fun execute(tool: RequestedTool, command: String, context: RequestContext): String {
         val index = _items.value.size
         runningIndex = index
         killRequested = false
@@ -987,7 +1001,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 return screen
             }
             val linux = tool.name == ToolNames.LINUX
-            val result = bridge.execute(command, linux, activeDistroValue(), if (linux) activeProject.value?.workdir.orEmpty() else "")
+            val result = shellExecutor(command, linux, context.distro, if (linux) context.workdir else "")
             val output = result.getString("output").orEmpty()
             val exit = result.getInt("exitCode")
             if (killRequested && exit != 0) {

@@ -1,0 +1,4 @@
+CairoSVG==2.9.1
+uharfbuzz==0.57.0
+fonttools==4.57.0
+Pillow==11.1.0

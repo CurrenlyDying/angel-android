@@ -5,6 +5,7 @@ plugins {
 
 android {
     namespace = "com.bruh.angel"
+    buildToolsVersion = "36.0.0"
     compileSdk {
         version = release(37)
     }
@@ -14,8 +15,8 @@ android {
         applicationId = "com.bruh.angel"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -46,7 +47,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = providers.gradleProperty("angel.applicationIdSuffix").orNull
+        }
         release {
+            vcsInfo { include = false }
+            applicationIdSuffix = providers.gradleProperty("angel.applicationIdSuffix").orNull
             optimization {
                 enable = false
             }

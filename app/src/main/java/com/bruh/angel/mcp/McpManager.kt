@@ -32,7 +32,9 @@ class McpManager(
     private val bridge: ShizukuBridge,
     private val store: ProviderSettingsStore,
     private val scope: CoroutineScope,
-    private val selectedDistro: () -> LinuxDistro
+    private val selectedDistro: () -> LinuxDistro,
+    /** Server ids the active project turns on, or null when no project is active (all servers available). */
+    private val activeConnectors: () -> Set<String>? = { null }
 ) {
     private val _servers = MutableStateFlow<List<McpServerState>>(emptyList())
     val servers: StateFlow<List<McpServerState>> = _servers.asStateFlow()
@@ -42,6 +44,7 @@ class McpManager(
     private val everReady = ConcurrentHashMap.newKeySet<String>()
     private val loaded = CompletableDeferred<Unit>()
     private val saveLock = Any()
+    @Volatile private var localToolNames: Set<String> = emptySet()
 
     fun load() {
         scope.launch(Dispatchers.IO) {
@@ -81,6 +84,7 @@ class McpManager(
     /** Adds a server (rejects duplicates) and persists it. Returns the stored config. */
     fun add(config: McpServerConfig): McpServerConfig {
         require(McpServerConfig.ID.matches(config.id)) { "Invalid server id" }
+        require(config.id != LOCAL_DISCOVERY_ID) { "This server id is reserved for tool discovery" }
         require(config.id !in taken()) { "A server with that id already exists" }
         _servers.update { it + McpServerState(config, restState(config)) }
         persist()
@@ -171,8 +175,10 @@ class McpManager(
     suspend fun prepare(timeoutMs: Long = 25_000) {
         loaded.await()
         val now = _servers.value
+        val active = activeConnectors()
         val starting = now.filter { s ->
-            s.config.enabled && (s.state == McpState.OFF || (s.state == McpState.ERROR && s.config.id in everReady))
+            s.config.enabled && (active == null || s.config.id in active) &&
+                (s.state == McpState.OFF || (s.state == McpState.ERROR && s.config.id in everReady))
         }.map { start(it.config.id) }
         val running = now.filter { it.state == McpState.STARTING }.mapNotNull { jobs[it.config.id] }
         withTimeoutOrNull(timeoutMs) { (starting + running).joinAll() }
@@ -256,10 +262,10 @@ class McpManager(
         return config.installScript.takeIf { it.isNotBlank() }
     }
 
-    fun install(id: String): Job = synchronized(jobs) {
+    fun install(id: String, distro: LinuxDistro = selectedDistro()): Job = synchronized(jobs) {
         jobs[id]?.takeIf { it.isActive }?.let { return it }
         val job = scope.launch(Dispatchers.IO, CoroutineStart.LAZY) {
-            try { doInstall(id) } catch (e: CancellationException) {
+            try { doInstall(id, distro) } catch (e: CancellationException) {
                 patch(id) { it.copy(state = McpState.ERROR, message = "Installation cancelled") }
                 throw e
             } catch (e: Exception) { fail(id, e.message ?: e.javaClass.simpleName) }
@@ -269,11 +275,19 @@ class McpManager(
         job
     }
 
-    private suspend fun doInstall(id: String) {
+    /** A completed Job can still represent a handled install failure; inspect its final state. */
+    suspend fun installAndAwait(id: String, distro: LinuxDistro) {
+        install(id, distro).join()
+        val state = get(id) ?: throw McpException("Server was removed during installation")
+        if (state.state != McpState.READY || (state.config.runtime == McpRuntime.LINUX && state.config.installedDistro != distro.id)) {
+            throw McpException(state.message.ifBlank { "${state.config.name} did not finish installing in ${distro.label}" })
+        }
+    }
+
+    private suspend fun doInstall(id: String, distro: LinuxDistro) {
         val config = get(id)?.config ?: return
         clients.remove(id)?.close()
         val linux = config.runtime == McpRuntime.LINUX
-        val distro = selectedDistro()
         val script = scriptFor(config, distro) ?: throw McpException("This server has nothing to install")
         patch(id) { it.copy(state = McpState.INSTALLING, message = "Installing…", log = emptyList(), tools = emptyList()) }
         if (linux) {
@@ -312,8 +326,10 @@ class McpManager(
 
     private fun refs(): Map<String, McpNaming.Ref> {
         val out = LinkedHashMap<String, McpNaming.Ref>()
+        val active = activeConnectors()
         for (s in _servers.value) {
             if (s.state != McpState.READY || !s.config.enabled || s.config.policy == ToolPolicy.DENY) continue
+            if (active != null && s.config.id !in active) continue
             for (ref in McpNaming.qualify(s.config.id, s.tools.filter { it.name !in s.config.disabledTools })) {
                 if (out.size < MAX_TOOLS) out[ref.qualified] = ref
             }
@@ -328,9 +344,43 @@ class McpManager(
         }
     }
 
+    /** Local models pay for every prompt token on the CPU; expose connector schemas on demand. */
+    val localExternalTools = ExternalTools {
+        val active = activeConnectors()
+        val available = _servers.value.filter { it.config.enabled && it.config.policy != ToolPolicy.DENY &&
+            (active == null || it.config.id in active) && it.state != McpState.NEEDS_INSTALL }
+        if (available.isEmpty()) emptyList()
+        else listOf(ExternalTool(
+            LOCAL_DISCOVERY_TOOL,
+            "Find extra tools by capability before using them. Connectors: " + available.joinToString { it.config.name } + ". Matching tools become available for your next call.",
+            JSONObject().put("type", "object").put("properties", JSONObject().put("query",
+                JSONObject().put("type", "string").put("description", "Capability needed, e.g. read files, search the web, or find documentation").put("maxLength", 200)))
+                .put("required", org.json.JSONArray().put("query"))
+        )) + externalTools.list().filter { it.name in localToolNames }
+    }
+
+    fun resetLocalTools() { localToolNames = emptySet() }
+
+    private suspend fun discoverLocalTools(query: String): McpCallResult {
+        prepare()
+        val words = query.lowercase().split(Regex("[^a-z0-9]+")).filter { it.length > 1 }.take(12)
+        val matches = externalTools.list().map { tool ->
+            val name = tool.name.lowercase()
+            val description = tool.description.lowercase()
+            tool to words.sumOf { if (it in name) 3 else if (it in description) 1 else 0 }
+        }.filter { words.isEmpty() || it.second > 0 }.sortedByDescending { it.second }.take(4).map { it.first }
+        localToolNames = matches.map { it.name }.toSet()
+        val result = org.json.JSONArray()
+        matches.forEach { result.put(JSONObject().put("name", it.name).put("description", it.description.take(240))) }
+        return McpCallResult(JSONObject().put("tools", result).put("message", if (matches.isEmpty())
+            "No matching enabled tools. Try a different capability, or continue with the built-in tools."
+            else "These tools are now available with their argument schemas. Call the tool you need.").toString(), false)
+    }
+
     data class ToolInfo(val serverId: String, val serverName: String, val tool: String, val readOnly: Boolean, val policy: ToolPolicy)
 
     fun describe(qualified: String): ToolInfo? {
+        if (qualified == LOCAL_DISCOVERY_TOOL) return ToolInfo(LOCAL_DISCOVERY_ID, "MCP tools", "find_tools", true, ToolPolicy.ALLOW)
         val ref = refs()[qualified] ?: return null
         val config = get(ref.serverId)?.config ?: return null
         return ToolInfo(config.id, config.name, ref.tool.name, ref.tool.readOnly, config.policy)
@@ -338,6 +388,7 @@ class McpManager(
 
     /** Looks up display info even when the tool is currently unavailable (history, blocked calls). */
     fun label(qualified: String): Pair<String, String>? {
+        if (qualified == LOCAL_DISCOVERY_TOOL) return "MCP tools" to "Find tools"
         val (serverId, tool) = McpNaming.split(qualified) ?: return null
         val server = get(serverId)?.config?.name ?: serverId
         val original = get(serverId)?.tools?.firstOrNull { McpNaming.sanitize(it.name) == tool }?.name ?: tool
@@ -345,6 +396,7 @@ class McpManager(
     }
 
     suspend fun call(qualified: String, arguments: JSONObject): McpCallResult {
+        if (qualified == LOCAL_DISCOVERY_TOOL) return discoverLocalTools(arguments.optString("query").take(200))
         val ref = refs()[qualified]
             ?: return McpCallResult("This MCP tool is not available (the server is stopped, was removed, or the tool is turned off).", true)
         var client = clients[ref.serverId]
@@ -361,6 +413,8 @@ class McpManager(
     }
 
     companion object {
+        const val LOCAL_DISCOVERY_ID = "angel-discovery"
+        const val LOCAL_DISCOVERY_TOOL = "mcp__angel-discovery__find_tools"
         const val MAX_LOG = 300
         const val MAX_TOOLS = 64
         const val CONNECT_BUDGET_MS = 120_000L

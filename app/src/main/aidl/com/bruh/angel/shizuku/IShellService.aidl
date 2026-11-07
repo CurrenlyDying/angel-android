@@ -5,15 +5,21 @@ import android.os.ParcelFileDescriptor;
 interface IShellService {
     void destroy() = 16777114;
     int uid() = 0;
-    /** [distro] is the LinuxDistro id; ignored unless [linux] is true. */
-    Bundle execute(String command, boolean linux, String distro) = 1;
+    /**
+     * [distro] is the LinuxDistro id; ignored unless [linux] is true. [workdir] is an absolute path
+     * the command runs in (Linux only); "" means the default (/root).
+     */
+    Bundle execute(String command, boolean linux, String distro, String workdir) = 1;
     void cancel() = 2;
     String linuxStatus(String distro) = 3;
     void installArtifact(String distro, String name, in ParcelFileDescriptor archive) = 4;
     String finishInstall(String distro) = 5;
 
-    /** Starts a persistent interactive shell (no TTY). Reads stdin from input, writes stdout+stderr to output. */
-    int openTerminal(boolean linux, String distro, in ParcelFileDescriptor input, in ParcelFileDescriptor output) = 6;
+    /**
+     * Starts a persistent interactive shell (no TTY). Reads stdin from input, writes stdout+stderr to output.
+     * [workdir] is an absolute path the shell starts in (Linux only); "" means the default (/root).
+     */
+    int openTerminal(boolean linux, String distro, String workdir, in ParcelFileDescriptor input, in ParcelFileDescriptor output) = 6;
     /** Only SIGINT (2) is accepted: interrupts the running foreground command, keeps the shell. */
     void signalTerminal(int id, int signal) = 7;
     void closeTerminal(int id) = 8;

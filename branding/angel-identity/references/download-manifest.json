@@ -1,0 +1,43 @@
+[
+  {
+    "file": "fonts/bodonimoda/BodoniModa-Italic[opsz,wght].ttf",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/bodonimoda/BodoniModa-Italic%5Bopsz%2Cwght%5D.ttf",
+    "git_blob_sha": "174375b9265ac430071f6f1f20de8dbe088c61c1",
+    "sha256": "dfff1619f8f6871c6372f8855b67211f9a73b4e93d45aca868cd8f46a48622de"
+  },
+  {
+    "file": "fonts/bodonimoda/BodoniModa[opsz,wght].ttf",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/bodonimoda/BodoniModa%5Bopsz%2Cwght%5D.ttf",
+    "git_blob_sha": "c5d582f8003ae692761dd8e9ce69de23cb9fea53",
+    "sha256": "550f5e34ee0a828d7941b1fe9bc58b34e5260d3f33a61532e6d0a0114e79a5cf"
+  },
+  {
+    "file": "fonts/bodonimoda/OFL.txt",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/bodonimoda/OFL.txt",
+    "git_blob_sha": "973cec73f0874f3b7821a44ff43e4a4c88e44844",
+    "sha256": "931dfe2e0cd3c9443295f5c1d754b8a8403bf060df50c1d5900267ade83d0046"
+  },
+  {
+    "file": "fonts/ibmplexmono/IBMPlexMono-Medium.ttf",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexmono/IBMPlexMono-Medium.ttf",
+    "git_blob_sha": "33c546f68b6007a45a3f10e845523abb2db25399",
+    "sha256": "a9b4c49bb299e05b5f6c481e7fb5e78943d2793249a0c8874ab574a2d1ea6755"
+  },
+  {
+    "file": "fonts/ibmplexmono/IBMPlexMono-Regular.ttf",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexmono/IBMPlexMono-Regular.ttf",
+    "git_blob_sha": "0c9770d5183ba60dc4350d3e011b782a320761ae",
+    "sha256": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46"
+  },
+  {
+    "file": "fonts/ibmplexmono/OFL.txt",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexmono/OFL.txt",
+    "git_blob_sha": "c35c4c618fab33da8695177b3a6cefe0810b7b28",
+    "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da"
+  },
+  {
+    "file": "references/nasa-full-moon.tif",
+    "url": "https://svs.gsfc.nasa.gov/vis/a000000/a005000/a005048/phase_full.1571.tif",
+    "sha256": "8760f64e4a9f327adf29a72a3c8bcfe4dddbe42b5d308f48a381b1703a98e3d1"
+  }
+]

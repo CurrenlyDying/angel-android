@@ -1,20 +1,38 @@
 {
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "Deploy on save (watch)",
-      "type": "shell",
-      "command": "./dev.sh",
-      "isBackground": true,
-      "problemMatcher": [],
-      "group": { "kind": "build", "isDefault": true },
-      "presentation": { "panel": "dedicated", "reveal": "always" }
-    },
-    {
-      "label": "Deploy once",
-      "type": "shell",
-      "command": "./dev.sh once",
-      "problemMatcher": []
-    }
-  ]
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Deploy on save (watch)",
+			"type": "shell",
+			"command": "./dev.sh",
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "always"
+			}
+		},
+		{
+			"label": "Deploy once",
+			"type": "shell",
+			"command": "./dev.sh once",
+			"problemMatcher": []
+		},
+		{
+			"label": "Build debug and release APKs",
+			"type": "shell",
+			"command": "./gradlew",
+			"args": [
+				":app:assembleDebug",
+				":app:assembleRelease"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
 }

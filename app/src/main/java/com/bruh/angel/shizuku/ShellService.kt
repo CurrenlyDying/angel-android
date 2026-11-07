@@ -116,11 +116,11 @@ class ShellService : IShellService.Stub() {
     }
 
     @Synchronized
-    override fun execute(command: String, linux: Boolean, distro: String): Bundle {
+    override fun execute(command: String, linux: Boolean, distro: String, workdir: String): Bundle {
         requireShell()
         require(command.isNotBlank() && command.length <= 8000)
         val d = if (linux) LinuxDistro.fromId(distro).also { check(linuxReady(it)) { "Install ${it.label} in Settings first" } } else null
-        return runCommand(command, d)
+        return runCommand(command, d, workdir)
     }
 
     private fun requireShell() {
@@ -132,17 +132,31 @@ class ShellService : IShellService.Stub() {
     /** Fixed wrapper: prints its PID (= new process-group id) then execs the real command (passed as argv). */
     private val wrapper = listOf("/system/bin/setsid", "/system/bin/sh", "-c", "echo $$; exec \"\$@\"", "angel")
 
-    private fun prootArgs(home: File, command: List<String>, env: List<String> = emptyList()): List<String> {
+    /** [workdir] is the proot working directory; blank falls back to /root. Validated by [sanitizeWorkdir]. */
+    private fun prootArgs(home: File, command: List<String>, env: List<String> = emptyList(), workdir: String = ""): List<String> {
         val runtime = File(home, "runtime")
+        val directory = sanitizeWorkdir(workdir)
+        // proot silently falls back to / when -w does not exist. Enter the requested directory
+        // in the guest shell instead, and never execute the command if that cd fails.
+        val inDirectory = listOf("/bin/sh", "-c", "cd -- \"\$1\" || exit; shift; exec \"\$@\"", "angel-workdir", directory) + command
         return listOf(
             File(runtime, "bin/proot").path, "--kill-on-exit", "--link2symlink", "-0",
             "-r", File(home, "rootfs").path,
             "-b", "/dev", "-b", "/proc", "-b", "/sys",
             "-b", "/storage/emulated/0:/sdcard",
-            "-w", "/root",
+            "-w", "/",
             "/usr/bin/env", "-i", "HOME=/root", "USER=root", "TERM=dumb", "LANG=C.UTF-8",
             "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-        ) + env + command
+        ) + env + inDirectory
+    }
+
+    /** Blank uses /root; invalid explicit paths must never change the command's destination. */
+    private fun sanitizeWorkdir(workdir: String): String {
+        if (workdir.isEmpty()) return "/root"
+        require(workdir.startsWith("/") && workdir.length < 4096 && '\n' !in workdir && '\u0000' !in workdir) {
+            "The working directory must be a valid absolute path"
+        }
+        return workdir
     }
 
     private fun prootEnv(home: File): Map<String, String> {
@@ -156,9 +170,9 @@ class ShellService : IShellService.Stub() {
         )
     }
 
-    private fun runCommand(command: String, distro: LinuxDistro?): Bundle {
+    private fun runCommand(command: String, distro: LinuxDistro?, workdir: String = ""): Bundle {
         val home = distro?.let { installer.dir(it) }
-        val args = if (home != null) prootArgs(home, listOf("/bin/sh", "-lc", command))
+        val args = if (home != null) prootArgs(home, listOf("/bin/sh", "-lc", command), workdir = workdir)
         else listOf("/system/bin/sh", "-c", command)
         val builder = ProcessBuilder(wrapper + args).redirectErrorStream(true)
             .directory(home ?: File("/data/local/tmp"))
@@ -208,7 +222,7 @@ class ShellService : IShellService.Stub() {
 
     // ---- Interactive terminal sessions -------------------------------------------------------
 
-    override fun openTerminal(linux: Boolean, distro: String, input: ParcelFileDescriptor, output: ParcelFileDescriptor): Int {
+    override fun openTerminal(linux: Boolean, distro: String, workdir: String, input: ParcelFileDescriptor, output: ParcelFileDescriptor): Int {
         requireShell()
         val d = if (linux) LinuxDistro.fromId(distro) else null
         try {
@@ -220,7 +234,7 @@ class ShellService : IShellService.Stub() {
         }
         val home = d?.let { installer.dir(it) }
         // -i: interactive shell (prompts, survives SIGINT) even though stdin is a pipe, not a TTY.
-        val args = if (home != null) prootArgs(home, listOf("/bin/sh", "-l", "-i")) else listOf("/system/bin/sh", "-i")
+        val args = if (home != null) prootArgs(home, listOf("/bin/sh", "-l", "-i"), workdir = workdir) else listOf("/system/bin/sh", "-i")
         val builder = ProcessBuilder(wrapper + args).redirectErrorStream(true)
             .directory(home ?: File("/data/local/tmp"))
         if (home != null) builder.environment().putAll(prootEnv(home))

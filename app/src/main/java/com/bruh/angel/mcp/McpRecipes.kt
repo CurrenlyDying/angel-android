@@ -132,6 +132,124 @@ object McpRecipes {
     fun source(pkg: McpPackage) = "${if (pkg.type == McpPackageType.NPM) "npm" else "pypi"}|${pkg.identifier}|${pkg.version}"
 
     fun removeScript(id: String) = "rm -rf ${quote(dir(id))}"
+
+    // ---- install from a GitHub repository (clone + auto-detect) ------------------------------
+
+    private val GIT_REF = Regex("[A-Za-z0-9._/-]{0,100}")
+    private val SUBDIR = Regex("[A-Za-z0-9._/ -]{0,200}")
+
+    fun githubRunPath(id: String) = "${dir(id)}/run.sh"
+
+    // Dependency packages also install console scripts. Match pip's source-directory
+    // metadata so a helper such as cffi-gen-src is never mistaken for the MCP server.
+    internal val githubPythonStartSelector = """
+        import importlib.metadata as metadata
+        import json, re, shlex, sys
+        from pathlib import Path
+        from urllib.parse import unquote, urlparse
+        project = Path(sys.argv[1]).resolve()
+        normalize = lambda name: re.sub(r"[-_.]+", "-", name).lower()
+        for dist in metadata.distributions():
+            raw = dist.read_text("direct_url.json")
+            if not raw:
+                continue
+            try:
+                origin = json.loads(raw)
+                url = urlparse(origin.get("url", ""))
+                if "dir_info" not in origin or url.scheme != "file" or Path(unquote(url.path)).resolve() != project:
+                    continue
+            except (ValueError, OSError):
+                continue
+            entries = [entry for entry in dist.entry_points if entry.group == "console_scripts"]
+            if entries:
+                preferred = [entry for entry in entries if normalize(entry.name) == normalize(dist.metadata.get("Name", ""))]
+                entry = (preferred or entries)[0]
+                print(shlex.join([str(Path(sys.executable).parent / entry.name)]))
+                sys.exit(0)
+        for name in ("server.py", "main.py", "__main__.py"):
+            script = project / name
+            if script.is_file():
+                print(shlex.join([sys.executable, str(script)]))
+                sys.exit(0)
+        sys.exit("Could not find a console entry point or server.py/main.py in this Python project.")
+    """.trimIndent()
+
+    fun githubRepoName(repoUrl: String): String =
+        repoUrl.trim().removeSuffix("/").substringAfterLast('/').removeSuffix(".git").ifBlank { "server" }
+
+    fun validateGithub(repoUrl: String, ref: String, subdir: String): String? {
+        com.bruh.angel.linuxenv.ProjectWorkspace.validateRepoUrl(repoUrl)?.let { return it }
+        if (!GIT_REF.matches(ref.trim())) return "Unsupported branch or tag"
+        if (subdir.contains("..") || !SUBDIR.matches(subdir.trim())) return "Unsupported subdirectory"
+        return null
+    }
+
+    /**
+     * Clones [repoUrl] into <dir>/src, detects an npm (package.json) or Python
+     * (pyproject/setup.py/requirements) project, installs/builds it, and writes a run.sh that the
+     * start command execs. Entry-point detection is best-effort; the command is shown for editing.
+     */
+    fun githubInstallScript(id: String, repoUrl: String, ref: String, subdir: String, distro: LinuxDistro): String {
+        require(validateGithub(repoUrl, ref, subdir) == null)
+        val dir = dir(id)
+        val url = repoUrl.trim()
+        val branch = ref.trim().let { if (it.isEmpty()) "" else "--branch ${quote(it)}" }
+        val sub = subdir.trim().trim('/')
+        val cdSub = if (sub.isEmpty()) ":" else "cd ${quote(sub)}"
+        val sysBase = if (distro.aptBased)
+            "export DEBIAN_FRONTEND=noninteractive\n" +
+                "apt-get -o APT::Sandbox::User=root -o DPkg::Lock::Timeout=180 update -qq\n" +
+                "apt-get -o APT::Sandbox::User=root -o DPkg::Lock::Timeout=180 install -y -qq --no-install-recommends ca-certificates git wget"
+        else "apk add --no-cache ca-certificates git wget"
+        val ensureNode = if (distro.aptBased) """
+            if ! command -v node >/dev/null 2>&1; then
+              echo "==> Installing Node.js $NODE_VERSION"
+              if wget -q -O /tmp/node.tgz https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-arm64.tar.gz && echo "$NODE_SHA256  /tmp/node.tgz" | sha256sum -c - >/dev/null 2>&1; then
+                rm -rf /opt/node; mkdir -p /opt/node; tar -xzf /tmp/node.tgz -C /opt/node --strip-components=1
+                for b in node npm npx; do ln -sf /opt/node/bin/${'$'}b /usr/local/bin/${'$'}b; done; rm -f /tmp/node.tgz
+              else
+                echo "==> Using distro Node packages"; apt-get -o APT::Sandbox::User=root install -y -qq --no-install-recommends nodejs npm
+              fi
+            fi
+        """.trimIndent() else "command -v node >/dev/null 2>&1 || apk add --no-cache nodejs npm"
+        val ensurePython = if (distro.aptBased)
+            "python3 -c 'import venv, ensurepip' >/dev/null 2>&1 || apt-get -o APT::Sandbox::User=root install -y -qq --no-install-recommends python3 python3-venv python3-pip"
+        else "python3 -c 'import venv, ensurepip' >/dev/null 2>&1 || apk add --no-cache python3 py3-pip"
+        val nodeEntry = quote("const p=require('./package.json');let e='';const b=p.bin;if(typeof b==='string'){e=b}else if(b&&typeof b==='object'){e=b[Object.keys(b)[0]]}if(!e){e=p.main||'index.js'}process.stdout.write(e)")
+        return """
+            set -e
+            DIR=${quote(dir)}
+            echo "==> Installing system packages"
+            $sysBase
+            rm -rf "${'$'}DIR"
+            mkdir -p "${'$'}DIR"
+            echo "==> Cloning $url"
+            git clone --depth 1 $branch ${quote(url)} "${'$'}DIR/src"
+            cd "${'$'}DIR/src"
+            $cdSub
+            PROJ=${'$'}(pwd)
+            if [ -f package.json ]; then
+              echo "==> Node project detected"
+              $ensureNode
+              npm install --no-audit --no-fund --loglevel=http
+              if node -e "var s=(require('./package.json').scripts)||{};process.exit(s.build?0:1)" 2>/dev/null; then echo "==> Building"; npm run build; fi
+              ENTRY=${'$'}(node -e $nodeEntry)
+              echo "==> Starts as: node ${'$'}ENTRY"
+              printf 'cd %s\nexec node %s\n' "${'$'}PROJ" "${'$'}ENTRY" > "${'$'}DIR/run.sh"
+            elif [ -f pyproject.toml ] || [ -f setup.py ] || [ -f requirements.txt ]; then
+              echo "==> Python project detected"
+              $ensurePython
+              python3 -m venv "${'$'}DIR/venv"
+              if [ -f pyproject.toml ] || [ -f setup.py ]; then "${'$'}DIR/venv/bin/pip" install --no-cache-dir --disable-pip-version-check . ; else "${'$'}DIR/venv/bin/pip" install --no-cache-dir --disable-pip-version-check -r requirements.txt ; fi
+              ENTRY=${'$'}("${'$'}DIR/venv/bin/python" -c ${quote(githubPythonStartSelector)} "${'$'}PROJ")
+              echo "==> Starts as: ${'$'}ENTRY"
+              printf 'cd %s\nexec %s\n' "${'$'}PROJ" "${'$'}ENTRY" > "${'$'}DIR/run.sh"
+            else
+              echo "Unsupported repository: no package.json, pyproject.toml, setup.py or requirements.txt"; exit 3
+            fi
+            echo "==> Installed"
+        """.trimIndent()
+    }
 }
 
 /** Builds the stored configuration for each way of adding a server. */
@@ -153,6 +271,18 @@ object McpSetup {
         return McpServerConfig(
             id = McpServerConfig.slug(name.ifBlank { defaultName(clean) }, taken), name = name.ifBlank { defaultName(clean) }.take(60),
             kind = McpKind.REMOTE, url = clean, headers = headers.filterValues { it.isNotBlank() }, description = description.take(400)
+        )
+    }
+
+    /** A server cloned from a GitHub repo and auto-detected (npm or Python), run over stdio in Linux. */
+    fun github(name: String, repoUrl: String, ref: String, subdir: String, distro: LinuxDistro, taken: Set<String>): McpServerConfig {
+        val label = name.ifBlank { McpRecipes.githubRepoName(repoUrl) }
+        val id = McpServerConfig.slug(label, taken)
+        return McpServerConfig(
+            id = id, name = label.take(60), kind = McpKind.CUSTOM, runtime = McpRuntime.LINUX,
+            installScript = McpRecipes.githubInstallScript(id, repoUrl, ref, subdir, distro),
+            command = "sh ${McpRecipes.quote(McpRecipes.githubRunPath(id))}",
+            description = "Cloned from ${repoUrl.trim()}".take(400), policy = ToolPolicy.ASK
         )
     }
 

@@ -45,11 +45,20 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     private val sessions = Mode.entries.associateWith { Session() }
     private val history = ArrayList<String>()
     private var distro = LinuxDistro.DEFAULT
+    /** Working directory for the Linux shell ("" = default /root); set from the active project. */
+    private var workdir = ""
 
     /** Switching distro in Settings ends the old Linux shell; the next one starts in the new distro. */
     fun useDistro(d: LinuxDistro) {
         if (d == distro) return
         distro = d
+        reset(Mode.LINUX, start = _mode.value == Mode.LINUX)
+    }
+
+    /** The active project's working directory changed; restart the Linux shell there. */
+    fun useWorkdir(path: String) {
+        if (path == workdir) return
+        workdir = path
         reset(Mode.LINUX, start = _mode.value == Mode.LINUX)
     }
 
@@ -67,7 +76,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         s.state.value = s.state.value.copy(starting = true)
         viewModelScope.launch {
             try {
-                val handle = bridge.openTerminal(mode == Mode.LINUX, distro)
+                val handle = bridge.openTerminal(mode == Mode.LINUX, distro, if (mode == Mode.LINUX) workdir else "")
                 s.handle = handle
                 append(s, "[${banner(mode)}]\n[No TTY: full-screen programs (vim, top, less) won't work. Ctrl-C interrupts.]\n")
                 s.reader = viewModelScope.launch(Dispatchers.IO) { readLoop(s, handle) }

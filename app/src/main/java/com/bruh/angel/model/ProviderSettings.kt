@@ -216,6 +216,32 @@ class ProviderSettingsStore(context: Context) {
         write(read().put("mcp", org.json.JSONArray(servers.map { it.toJson() })))
     }
 
+    @Synchronized
+    fun loadProjects(): List<Project> {
+        val list = read().optJSONArray("projects") ?: return emptyList()
+        return (0 until list.length()).mapNotNull { list.optJSONObject(it)?.let(Project::fromJson) }
+            .distinctBy { it.id }
+    }
+
+    @Synchronized
+    fun saveProjects(projects: List<Project>) {
+        write(read().put("projects", org.json.JSONArray(projects.take(Project.MAX).map { it.toJson() })))
+    }
+
+    /** Persisted skills: imported ones whole, built-ins only their enabled/setup state (bodies live in assets). */
+    @Synchronized
+    fun loadSkills(): List<Skill> {
+        val list = read().optJSONArray("skills") ?: return emptyList()
+        return (0 until list.length()).mapNotNull { list.optJSONObject(it)?.let(Skill::fromJson) }.distinctBy { it.id }
+    }
+
+    @Synchronized
+    fun saveSkills(skills: List<Skill>) {
+        // Built-in bodies come from assets, so don't duplicate them in the encrypted blob.
+        val trimmed = skills.take(Skill.MAX).map { if (it.builtin) it.copy(instructions = "") else it }
+        write(read().put("skills", org.json.JSONArray(trimmed.map { it.toJson() })))
+    }
+
     /** Optional Hugging Face access token (gated models), kept encrypted like API keys. */
     @Synchronized
     fun hfToken(): String = read().optString("hfToken", "")

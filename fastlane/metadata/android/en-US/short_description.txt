@@ -1,0 +1,1 @@
+An Android AI agent with local models, Linux workspaces and MCP tools

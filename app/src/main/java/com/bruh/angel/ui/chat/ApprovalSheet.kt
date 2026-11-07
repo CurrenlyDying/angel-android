@@ -126,7 +126,7 @@ fun ApprovalSheet(tool: RequestedTool, provider: Provider, distro: LinuxDistro, 
             if (always) Callout("Allowed tools run model-requested actions without confirmation.", danger = tool.name == ToolNames.ANDROID)
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = deny, modifier = Modifier.weight(1f)) { Text("Deny") }
+                OutlinedButton(onClick = deny, modifier = Modifier.weight(1f)) { Text("Deny and stop") }
                 Button(
                     enabled = isScreen || isMcp || command.isNotBlank(),
                     onClick = { onDecision(ChatViewModel.Approval(true, command, always)) },

@@ -78,6 +78,7 @@ import com.bruh.angel.ui.SecureWindow
 import com.bruh.angel.ui.chat.ChatViewModel
 import com.bruh.angel.ui.components.Callout
 import com.bruh.angel.ui.components.EmptyState
+import com.bruh.angel.ui.components.ExternalCodeConsentDialog
 import com.bruh.angel.ui.components.Hint
 import com.bruh.angel.ui.components.Pill
 import com.bruh.angel.ui.components.StatusDot
@@ -105,6 +106,7 @@ fun McpScreen(vm: ChatViewModel, onBack: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     var showRemote by rememberSaveable { mutableStateOf(false) }
     var showCustom by rememberSaveable { mutableStateOf(false) }
+    var showGithub by rememberSaveable { mutableStateOf(false) }
     var installing by remember { mutableStateOf<McpCatalogEntry?>(null) }
 
     fun toast(text: String) { vm.notice.value = text }
@@ -135,6 +137,8 @@ fun McpScreen(vm: ChatViewModel, onBack: () -> Unit) {
                 actions = {
                     IconButton(onClick = { menu = true }) { Icon(painterResource(R.drawable.ic_add), contentDescription = "Add a server") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(text = { Text("Install from GitHub") }, leadingIcon = { Icon(painterResource(R.drawable.ic_code), null) },
+                            onClick = { menu = false; showGithub = true })
                         DropdownMenuItem(text = { Text("Connect to hosted server") }, leadingIcon = { Icon(painterResource(R.drawable.ic_cloud), null) },
                             onClick = { menu = false; showRemote = true })
                         DropdownMenuItem(text = { Text("Custom command") }, leadingIcon = { Icon(painterResource(R.drawable.ic_code), null) },
@@ -203,6 +207,16 @@ fun McpScreen(vm: ChatViewModel, onBack: () -> Unit) {
         runCatching {
             val config = vm.mcp.add(McpSetup.custom(c.name, c.command, c.install, c.runtime, c.env, vm.mcp.taken()))
             if (config.installScript.isNotBlank()) vm.mcp.install(config.id) else vm.mcp.start(config.id)
+            tab = 0
+            detailId = config.id
+        }.onFailure { toast(it.message ?: "Could not add server") }
+    }
+
+    if (showGithub) GitHubDialog(prefs.distro, onDismiss = { showGithub = false }) { name, repoUrl, ref, subdir ->
+        showGithub = false
+        runCatching {
+            val config = vm.mcp.add(McpSetup.github(name, repoUrl, ref, subdir, prefs.distro, vm.mcp.taken()))
+            vm.mcp.install(config.id)
             tab = 0
             detailId = config.id
         }.onFailure { toast(it.message ?: "Could not add server") }
@@ -395,6 +409,7 @@ private fun ServerSheet(s: McpServerState, vm: ChatViewModel, onDismiss: () -> U
     val colors = AngelTheme.colors
     var confirmRemove by remember { mutableStateOf(false) }
     var editSecrets by remember { mutableStateOf(false) }
+    var confirmInstall by rememberSaveable(c.id) { mutableStateOf(false) }
     val busy = s.state == McpState.INSTALLING || s.state == McpState.STARTING
     val canInstall = c.kind != McpKind.REMOTE && (c.source.isNotBlank() || c.installScript.isNotBlank())
 
@@ -443,7 +458,7 @@ private fun ServerSheet(s: McpServerState, vm: ChatViewModel, onDismiss: () -> U
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(enabled = c.enabled && !busy, onClick = { vm.mcp.restart(c.id) }, modifier = Modifier.weight(1f)) { Text("Restart") }
                 if (s.state == McpState.INSTALLING) OutlinedButton(onClick = { vm.mcp.stop(c.id) }, modifier = Modifier.weight(1f)) { Text("Cancel install") }
-                else if (canInstall) OutlinedButton(enabled = !busy, onClick = { vm.mcp.install(c.id) }, modifier = Modifier.weight(1f)) {
+                else if (canInstall) OutlinedButton(enabled = !busy, onClick = { confirmInstall = true }, modifier = Modifier.weight(1f)) {
                     Text(if (s.state == McpState.NEEDS_INSTALL) "Install" else "Reinstall")
                 }
                 OutlinedButton(onClick = { editSecrets = true }, modifier = Modifier.weight(1f)) { Text("Credentials") }
@@ -462,6 +477,13 @@ private fun ServerSheet(s: McpServerState, vm: ChatViewModel, onDismiss: () -> U
             Spacer(Modifier.size(8.dp))
         }
     }
+
+    if (confirmInstall) ExternalCodeConsentDialog(
+        title = "Install ${c.name}?",
+        details = "Runs this server's saved installation recipe in Linux, including downloads from its package registry or GitHub repository and any required runtime dependencies. The server can access Linux files and /sdcard.",
+        onDismiss = { confirmInstall = false },
+        onConfirm = { confirmInstall = false; vm.mcp.install(c.id) }
+    )
 
     if (confirmRemove) AlertDialog(
         onDismissRequest = { confirmRemove = false },

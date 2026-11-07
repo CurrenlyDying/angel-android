@@ -15,7 +15,9 @@ data class ConversationMeta(
     val updated: Long,
     val provider: String,
     val model: String,
-    val messages: Int
+    val messages: Int,
+    /** Project this chat belongs to, or null for general (unassigned) chats. */
+    val projectId: String? = null
 )
 
 data class Conversation(
@@ -26,7 +28,9 @@ data class Conversation(
     val model: String,
     val items: List<ChatItem>,
     /** Provider-native model context, restorable only with the same provider and model. */
-    val history: String?
+    val history: String?,
+    /** Project this chat belongs to, or null for general (unassigned) chats. */
+    val projectId: String? = null
 )
 
 /**
@@ -59,6 +63,9 @@ class ConversationStore(context: Context) {
         return runCatching { decodeIndex(JSONArray(text)) }.getOrElse { rebuildIndex() }
     }
 
+    /** Conversations belonging to [projectId] (null = general, unassigned chats). */
+    fun list(projectId: String?): List<ConversationMeta> = list().filter { it.projectId == projectId }
+
     @Synchronized
     fun save(conversation: Conversation) {
         dir.mkdirs()
@@ -89,7 +96,8 @@ class ConversationStore(context: Context) {
         writeAtomic(index, JSONArray().also { array ->
             metas.forEach {
                 array.put(JSONObject().put("id", it.id).put("title", it.title).put("updated", it.updated)
-                    .put("provider", it.provider).put("model", it.model).put("messages", it.messages))
+                    .put("provider", it.provider).put("model", it.model).put("messages", it.messages)
+                    .put("projectId", it.projectId ?: JSONObject.NULL))
             }
         }.toString())
     }
@@ -105,7 +113,8 @@ class ConversationStore(context: Context) {
     private fun decodeIndex(array: JSONArray): List<ConversationMeta> = (0 until array.length()).mapNotNull { i ->
         array.optJSONObject(i)?.let {
             ConversationMeta(it.getString("id"), it.optString("title"), it.optLong("updated"),
-                it.optString("provider"), it.optString("model"), it.optInt("messages"))
+                it.optString("provider"), it.optString("model"), it.optInt("messages"),
+                if (it.isNull("projectId")) null else it.optString("projectId").ifBlank { null })
         }
     }
 
@@ -116,7 +125,7 @@ class ConversationStore(context: Context) {
         fun newId(): String = UUID.randomUUID().toString()
 
         fun Conversation.meta() = ConversationMeta(id, title, updated, provider.label, model,
-            items.count { it is ChatItem.UserMsg || it is ChatItem.AgentMsg })
+            items.count { it is ChatItem.UserMsg || it is ChatItem.AgentMsg }, projectId)
 
         fun encodeItems(items: List<ChatItem>): JSONArray = JSONArray().also { array ->
             items.forEach { item ->
@@ -144,6 +153,7 @@ class ConversationStore(context: Context) {
             .put("provider", c.provider.name).put("model", c.model)
             .put("items", encodeItems(c.items))
             .put("history", c.history ?: JSONObject.NULL)
+            .put("projectId", c.projectId ?: JSONObject.NULL)
 
         fun decode(o: JSONObject): Conversation = Conversation(
             id = o.getString("id"),
@@ -152,7 +162,8 @@ class ConversationStore(context: Context) {
             provider = runCatching { Provider.valueOf(o.optString("provider")) }.getOrDefault(Provider.OPENAI),
             model = o.optString("model"),
             items = decodeItems(o.optJSONArray("items") ?: JSONArray()),
-            history = if (o.isNull("history")) null else o.optString("history")
+            history = if (o.isNull("history")) null else o.optString("history"),
+            projectId = if (o.isNull("projectId")) null else o.optString("projectId").ifBlank { null }
         )
 
         /** Plain-text export for sharing. */

@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+references/app-before-branding/
+integration-manifest.json
+review/compiled-branding-resources.zip

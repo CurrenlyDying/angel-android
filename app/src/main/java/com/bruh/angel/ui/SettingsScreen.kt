@@ -74,6 +74,7 @@ import com.bruh.angel.model.ToolPolicy
 import com.bruh.angel.ui.chat.ChatViewModel
 import com.bruh.angel.ui.chat.toolIcon
 import com.bruh.angel.ui.components.Callout
+import com.bruh.angel.ui.components.EXTERNAL_CODE_NOTICE
 import com.bruh.angel.ui.components.HealthDot
 import com.bruh.angel.ui.components.Hint
 import com.bruh.angel.ui.components.InfoRow
@@ -85,7 +86,7 @@ import com.bruh.angel.ui.theme.mono
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun SettingsScreen(vm: ChatViewModel, onBack: () -> Unit, onOpenTerminal: () -> Unit, onOpenModels: () -> Unit, onOpenMcp: () -> Unit, onOpenAppearance: () -> Unit = {}) {
+fun SettingsScreen(vm: ChatViewModel, onBack: () -> Unit, onOpenTerminal: () -> Unit, onOpenModels: () -> Unit, onOpenMcp: () -> Unit, onOpenAppearance: () -> Unit = {}, onOpenSkills: () -> Unit = {}) {
     val mcpServers by vm.mcp.servers.collectAsStateWithLifecycle()
     val localModels by vm.localModels.models.collectAsStateWithLifecycle()
     val profile by vm.settings.collectAsStateWithLifecycle()
@@ -109,6 +110,7 @@ fun SettingsScreen(vm: ChatViewModel, onBack: () -> Unit, onOpenTerminal: () -> 
     var confirmDownload by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf(false) }
     var confirmDeleteAll by remember { mutableStateOf(false) }
+    var showThirdPartyNotices by rememberSaveable { mutableStateOf(false) }
     var instructions by rememberSaveable(prefs.instructions) { mutableStateOf(prefs.instructions) }
     val connected = shizuku.startsWith("Connected:")
     val linuxReady = linux.startsWith("Ready")
@@ -321,6 +323,18 @@ fun SettingsScreen(vm: ChatViewModel, onBack: () -> Unit, onOpenTerminal: () -> 
                     )
                 }
 
+                // ---- Skills ----
+                SectionCard(title = "Skills", subtitle = "Reusable capability packs (SKILL.md) you attach to projects.", icon = R.drawable.ic_sparkle) {
+                    val skills by vm.skills.collectAsStateWithLifecycle()
+                    InfoRow(
+                        title = if (skills.isEmpty()) "Browse skills" else "${skills.size} available",
+                        supporting = skills.firstOrNull { it.id == com.bruh.angel.model.SkillCatalog.REVERSE_ENGINEERING }
+                            ?.let { "Includes Reverse Engineering" } ?: "Import a SKILL.md or set up the built-ins",
+                        trailing = { Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, tint = MaterialTheme.colorScheme.outline) },
+                        onClick = onOpenSkills
+                    )
+                }
+
                 // ---- Permissions ----
                 SectionCard(
                     title = "Tool permissions",
@@ -378,10 +392,13 @@ fun SettingsScreen(vm: ChatViewModel, onBack: () -> Unit, onOpenTerminal: () -> 
                         Text("Delete all conversations", color = AngelTheme.colors.danger)
                     }
                 }
+                TextButton(onClick = { showThirdPartyNotices = true }) { Text("Third-party licenses") }
                 Spacer(Modifier.size(8.dp))
             }
         }
     }
+
+    if (showThirdPartyNotices) com.bruh.angel.ui.components.ThirdPartyNoticesDialog { showThirdPartyNotices = false }
 
     if (confirmLeave) AlertDialog(
         onDismissRequest = { confirmLeave = false },
@@ -405,7 +422,9 @@ fun SettingsScreen(vm: ChatViewModel, onBack: () -> Unit, onOpenTerminal: () -> 
                     "Downloads the pinned ARM64 runtime and ${d.label} root filesystem (about ${d.downloadMb} MB) over HTTPS and verifies their SHA-256 hashes. " +
                         "It needs about ${d.requiredFreeBytes / 1_048_576} MB free while installing. " +
                         (if (linuxReady) "Reinstalling replaces this distribution, including files inside it. " else "") +
-                        "Other distributions and Android data are not touched."
+                        "Sources: Termux packages and the distribution's official root filesystem. " +
+                        "Other distributions and Android data are not touched.\n\n" + EXTERNAL_CODE_NOTICE,
+                    modifier = Modifier.verticalScroll(rememberScrollState())
                 )
             },
             confirmButton = { TextButton(onClick = { confirmDownload = false; vm.installLinux(d) }) { Text("Download and verify") } },

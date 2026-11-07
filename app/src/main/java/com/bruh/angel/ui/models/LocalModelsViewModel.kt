@@ -69,6 +69,7 @@ class LocalModelsViewModel(application: Application) : AndroidViewModel(applicat
         }
         // Poll DownloadManager while downloads are running; verify finished ones.
         viewModelScope.launch {
+            runCatching { HuggingFace.reconcile(application) }
             while (isActive) {
                 val active = models.value.filter {
                     it.status == LocalModel.Status.DOWNLOADING || it.status == LocalModel.Status.VERIFYING

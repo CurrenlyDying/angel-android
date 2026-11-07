@@ -1,0 +1,430 @@
+[
+  {
+    "file": "android/res/drawable/ic_angel_background.xml",
+    "sha256": "2df629c86fcf88688c550d6bc60b766bc6de638a38ec02a2754b567e0bc30fc9"
+  },
+  {
+    "file": "android/res/drawable/ic_angel_connectors.xml",
+    "sha256": "7a52d6b7e0650a9bcc92b142a536ab62a92c682da428351a48aca4fd81bac1ae"
+  },
+  {
+    "file": "android/res/drawable/ic_angel_foreground.xml",
+    "sha256": "aa5d03576b9757ff1b064103c7f89d5640bd181fda04ee44c0519abaffcaaa4d"
+  },
+  {
+    "file": "android/res/drawable/ic_angel_mark.xml",
+    "sha256": "6cbee3e8790162f871ce60a628f215581ee2992df4f199037e76e87bbf64f404"
+  },
+  {
+    "file": "android/res/drawable/ic_angel_models.xml",
+    "sha256": "962d76af2a6985d78de6747149b0f425d5afed2a2d865dbaa2d93e6c42ced286"
+  },
+  {
+    "file": "android/res/drawable/ic_angel_monochrome.xml",
+    "sha256": "b204979e4f712d04bd36070569fc9ccf2b67e782089199dda7003ae4ea8ed57c"
+  },
+  {
+    "file": "android/res/drawable/ic_angel_projects.xml",
+    "sha256": "71a8fe823cd47fe5b934bef9420f53af7215c8f96108d53d54a67cea84c71c34"
+  },
+  {
+    "file": "android/res/drawable/ic_angel_reverse.xml",
+    "sha256": "3a33c17ed261c97134c783e066c79c25e1b1f3d3b3d57b97ff57c31b2b52fcfb"
+  },
+  {
+    "file": "android/res/drawable/ic_angel_skills.xml",
+    "sha256": "37e29931611ed09d0c951885a45891de3c4fee204ae66a5cd265a5e257827cc1"
+  },
+  {
+    "file": "android/res/drawable/ic_angel_terminal.xml",
+    "sha256": "72ab3815c4f248c512a209cc342efa2004363ba55ca8ec7fc78cf0d510506bca"
+  },
+  {
+    "file": "android/res/mipmap-anydpi-v26/ic_launcher.xml",
+    "sha256": "dfe143b750433c55020af6ed9a7c8757cd70e0098539ab95cba59890e83ebdb1"
+  },
+  {
+    "file": "android/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+    "sha256": "dfe143b750433c55020af6ed9a7c8757cd70e0098539ab95cba59890e83ebdb1"
+  },
+  {
+    "file": "android/res/mipmap-hdpi/ic_launcher.webp",
+    "sha256": "dd1311640cf8b23eabda28326938441dcb4537f44393b5d3f834bd61feb474d4"
+  },
+  {
+    "file": "android/res/mipmap-hdpi/ic_launcher_round.webp",
+    "sha256": "60a03cf554e5f400c70fc1ec16177f5462aa19f1bd297ef88e57c70124b452ad"
+  },
+  {
+    "file": "android/res/mipmap-mdpi/ic_launcher.webp",
+    "sha256": "4d44882d6b8b9e56fe5f5a3797a70d74f69205d3bda02f9f153c7799297b5493"
+  },
+  {
+    "file": "android/res/mipmap-mdpi/ic_launcher_round.webp",
+    "sha256": "c6ba1e0a07616cd1ed63e6f2e7d935e9fdd82e0548a9ebf3f8af9d6b596909fa"
+  },
+  {
+    "file": "android/res/mipmap-xhdpi/ic_launcher.webp",
+    "sha256": "dcec00dceba71a628867748308baed8a35f3c504c6fda6e4aead7ce9ad94829f"
+  },
+  {
+    "file": "android/res/mipmap-xhdpi/ic_launcher_round.webp",
+    "sha256": "b0288a37187ac5f1d563c38a864af2e2aad329121c99fd7f434a7c577706f740"
+  },
+  {
+    "file": "android/res/mipmap-xxhdpi/ic_launcher.webp",
+    "sha256": "125699dbc0508b3170f51ea0322448ba042e195b82faee2da942d65dda866eaa"
+  },
+  {
+    "file": "android/res/mipmap-xxhdpi/ic_launcher_round.webp",
+    "sha256": "c5a6e369ef3db987e09e0d3f19e65402531de5d08c5a029ceb8a627cabbe83ba"
+  },
+  {
+    "file": "android/res/mipmap-xxxhdpi/ic_launcher.webp",
+    "sha256": "c450b43e2c61a6876505601c6844684c1079c3b6d79e636148928dd74111afb5"
+  },
+  {
+    "file": "android/res/mipmap-xxxhdpi/ic_launcher_round.webp",
+    "sha256": "eb2428a2154d2e89ad912f939c165c3a97f468c4cff9d717ea8de86d804d3386"
+  },
+  {
+    "file": "exports/angel-feature-graphic-1024x500.png",
+    "sha256": "d93e021f8171b41959fe340a04f08b8c8f628627ea795c8e070c53de4bbf4e11"
+  },
+  {
+    "file": "exports/angel-ocean-background.png",
+    "sha256": "85b78cf30bcac6d71f5e875c3e3203c423f3ad9737c8e8d3a7f60ff90f7527f2"
+  },
+  {
+    "file": "exports/angel-portrait.png",
+    "sha256": "a39de111e6979e5b45f1f55f9e1c9a6790bc64e44056804c95810d3a3c817bc6"
+  },
+  {
+    "file": "exports/angel-square-inference.png",
+    "sha256": "615ef7bfe35732cfdb05d64d47b9299d835ed888204adca9431fd351fa30235a"
+  },
+  {
+    "file": "exports/angel-square-thesis.png",
+    "sha256": "545d237c13bd9b9a9bad5d53dbe2bbe5fdf225b094173aa353a93ae725cb7477"
+  },
+  {
+    "file": "exports/angel-square.png",
+    "sha256": "af20301ac9f3480d6825ab3047b81ca0d8cba010c42570ad9b60e68d8489a38a"
+  },
+  {
+    "file": "exports/angel-wide.png",
+    "sha256": "be331b1c7242bc94752e1070689e02212a9a71baf24349c3a388f9d1d2b55326"
+  },
+  {
+    "file": "exports/particles/seven-1.png",
+    "sha256": "90632d3813d921a499f40bbfbc7a63c74171691dbec0e1e5e82cfc185f7e0a5d"
+  },
+  {
+    "file": "exports/particles/seven-2.png",
+    "sha256": "2ff1ba51b49de8f8dd285e18b3a2359f34f0fe2789be192e73cbca9a3202b8b2"
+  },
+  {
+    "file": "exports/particles/seven-3.png",
+    "sha256": "27f0f043e500f8b23c7218d2aa9d43834403fa554338846dea8d6791e3b60af7"
+  },
+  {
+    "file": "exports/wordmarks/inference.png",
+    "sha256": "6cba6473431b8f930de0bbbcc64460ef151b255f70d41e86a0cb5d6e9a1389d3"
+  },
+  {
+    "file": "exports/wordmarks/synthesis.png",
+    "sha256": "de61007e536d2faa6170ae95401f5c834c5673a4e87d3082abcfa5dd2d54c707"
+  },
+  {
+    "file": "exports/wordmarks/thesis.png",
+    "sha256": "aedbd5711032c8ac97fb7ec3e48a1a2a75c173daa6a312c361934c1b073582bf"
+  },
+  {
+    "file": "icons/angel-lunar-gate-16.png",
+    "sha256": "a48fc6ac4b941377f27e470c979f99e4c53adc143a9ec388642ce51adaa4f262"
+  },
+  {
+    "file": "icons/angel-lunar-gate-192.png",
+    "sha256": "d56d957143063a9d04dcd396f6d24a95c1972ad4c16757b86e6d9a253956d52b"
+  },
+  {
+    "file": "icons/angel-lunar-gate-24.png",
+    "sha256": "01c5eb4e4b8f20f28400d778545af43eac77802843ada3027268cc70f37afec1"
+  },
+  {
+    "file": "icons/angel-lunar-gate-32.png",
+    "sha256": "5d1acdb5d4ba6c293c3116631bdc64bcea1997f667c35c093510357b3e79bee7"
+  },
+  {
+    "file": "icons/angel-lunar-gate-48.png",
+    "sha256": "eaca3265e63a5066fc552fe1a7c1ce8ea2194036209b30516492552917265dc0"
+  },
+  {
+    "file": "icons/angel-lunar-gate-512.png",
+    "sha256": "b4d8e7d278818ed5c3ba0bb68d7f7df903d87ce30645a3a3014ff2d85ab0bf58"
+  },
+  {
+    "file": "icons/angel-lunar-gate-64.png",
+    "sha256": "4988423a35a18ea20a95ef2e8503de92aab5ca3787390bdc2441234ee68354b7"
+  },
+  {
+    "file": "icons/angel-lunar-gate-96.png",
+    "sha256": "a500353e6c86007b31051e840d3270f3f6a92a5cfd4a73eb95d355cfd1677056"
+  },
+  {
+    "file": "icons/angel-lunar-gate.svg",
+    "sha256": "ad13e7ca7beaac562d1888d28bf861477ae25dd3ad19439470ff62847ddb4cbd"
+  },
+  {
+    "file": "icons/angel-prism-16.png",
+    "sha256": "31f825a7b9828d0a60ed36f2afaf566740414710ba23d804be9d357df9a6c61f"
+  },
+  {
+    "file": "icons/angel-prism-192.png",
+    "sha256": "7acceea7414524489cfda4b81dae5a3461aeb2d883272ac3a33208d0925e0236"
+  },
+  {
+    "file": "icons/angel-prism-24.png",
+    "sha256": "2b50c5ce927b73e1b7732c0a41056ae0618f5a4ed01c0f49ba624991a17e2fc2"
+  },
+  {
+    "file": "icons/angel-prism-32.png",
+    "sha256": "c85dd9a3071fa834f1afb90421e5a95a06db0ab14e1a8179d35fe75f8ca7843d"
+  },
+  {
+    "file": "icons/angel-prism-48.png",
+    "sha256": "e39f7cd23bad3d6336ef6ffa265e8a9803b19a0af9e4a5e09d5c57f54fa38d11"
+  },
+  {
+    "file": "icons/angel-prism-512.png",
+    "sha256": "37bd31bcce21145e8e4b348c169424a9d22a9b2443287956b5c21f9a5f137060"
+  },
+  {
+    "file": "icons/angel-prism-64.png",
+    "sha256": "d70fa3293395a92381918adfaaeaaadf85d0c9a7dd4d8a5ccedaea75574d734e"
+  },
+  {
+    "file": "icons/angel-prism-96.png",
+    "sha256": "2effb9552e10ace83fc3de566c5a6fdf39d6a44c6091380b4322938f04a984ca"
+  },
+  {
+    "file": "icons/angel-prism-foreground.svg",
+    "sha256": "16dd912045cb396ef5892680e6426454bf96fe17ef3dc61a9083868b3d71f806"
+  },
+  {
+    "file": "icons/angel-prism-monochrome-ink.svg",
+    "sha256": "c3f41a57dfab27abeefb139589d6efc95e199dfed6ee8d98800de94d02b2de79"
+  },
+  {
+    "file": "icons/angel-prism-monochrome.svg",
+    "sha256": "b6dd730d812085252463aa6928481e26a196ae4b4053dc2090566e566679a60c"
+  },
+  {
+    "file": "icons/angel-prism-optical-16.svg",
+    "sha256": "dda16636c851aa71c8ec1bec389f2ca7c89be5acd3b7391e29c842678c38db44"
+  },
+  {
+    "file": "icons/angel-prism-optical-24.svg",
+    "sha256": "dda16636c851aa71c8ec1bec389f2ca7c89be5acd3b7391e29c842678c38db44"
+  },
+  {
+    "file": "icons/angel-prism-optical-32.svg",
+    "sha256": "dda16636c851aa71c8ec1bec389f2ca7c89be5acd3b7391e29c842678c38db44"
+  },
+  {
+    "file": "icons/angel-prism-optical-48.svg",
+    "sha256": "1a3780fc0cf6b20414fc0eecd4b4a007a2eb6f53a66ce76b0e23b360599df1d0"
+  },
+  {
+    "file": "icons/angel-prism.svg",
+    "sha256": "1a3780fc0cf6b20414fc0eecd4b4a007a2eb6f53a66ce76b0e23b360599df1d0"
+  },
+  {
+    "file": "icons/angel-threefold-16.png",
+    "sha256": "5706fc786b116eb89cdf1eded51c5552fd4772bf0c0d7b7eb5543e13e7c76697"
+  },
+  {
+    "file": "icons/angel-threefold-192.png",
+    "sha256": "cf7da09027c97e778aa1418c40b514be7eb8aae32878c82ee98ca4fd14b332f7"
+  },
+  {
+    "file": "icons/angel-threefold-24.png",
+    "sha256": "60c3fbcef6232d6226f16639b41b435529cf65768e458da44129f1528ccf074c"
+  },
+  {
+    "file": "icons/angel-threefold-32.png",
+    "sha256": "090784ab9d5ebd318a483b5ab443a42f3339bdf9a1d401e9bede7c4eb94386c1"
+  },
+  {
+    "file": "icons/angel-threefold-48.png",
+    "sha256": "4ad88088e3e83bae8c5e1b36dcac3fe740bfeadcba2528a679a7f92e485c0ff5"
+  },
+  {
+    "file": "icons/angel-threefold-512.png",
+    "sha256": "e5e1b7ef2944c493444306bcc7b93dd7d01088d56f947a207e90cefedb22b8eb"
+  },
+  {
+    "file": "icons/angel-threefold-64.png",
+    "sha256": "af0029f009436a0766da2b776b08057e0c0d91a47f96bf75fe9f766e975c373c"
+  },
+  {
+    "file": "icons/angel-threefold-96.png",
+    "sha256": "e5113a15d1405c6ba4a22aa8f9fe7833ece68543253d2e514b471c2a1f766df3"
+  },
+  {
+    "file": "icons/angel-threefold.svg",
+    "sha256": "e29ac594f792b5cc1f146fcd122c2c65daa0ef15c621876177433aed40c70ca5"
+  },
+  {
+    "file": "icons/capabilities/connectors-96.png",
+    "sha256": "3b2c997362180b360738619b497d05f10f9dddb60c9e5a25a9c86e6600feef57"
+  },
+  {
+    "file": "icons/capabilities/connectors.svg",
+    "sha256": "c130774e151ff660b3cb56b26581a0f85c5d9b2b4ee16d926c65d671e21b42f9"
+  },
+  {
+    "file": "icons/capabilities/models-96.png",
+    "sha256": "82ce6ce6e3d231b0fabd58a44e55d4eeb48d2868afc7afda335d595b75b2674c"
+  },
+  {
+    "file": "icons/capabilities/models.svg",
+    "sha256": "52b231ebfd50520d5b19cebd0835e2096b36cadfaa221fabeb9bf16fddf1c240"
+  },
+  {
+    "file": "icons/capabilities/projects-96.png",
+    "sha256": "2fda630ef5e5097d3c0ffb3fce7e6ae2c451bb5e11ab61dbc418dc9e434a544d"
+  },
+  {
+    "file": "icons/capabilities/projects.svg",
+    "sha256": "e9908e3115ba436810fff5121e9ad0a48928ca7546c1474d2cff69d908ebe892"
+  },
+  {
+    "file": "icons/capabilities/reverse-96.png",
+    "sha256": "b32e802fba79c766b1e1af22f103687e7f32da666c0dad05d8048d6df1977266"
+  },
+  {
+    "file": "icons/capabilities/reverse.svg",
+    "sha256": "dd38b47a99b1cc3e7245747642471c74f64cc42c32198643620d71eaafe70a2a"
+  },
+  {
+    "file": "icons/capabilities/skills-96.png",
+    "sha256": "e290a677ad650e208b17b7dd5d61ed7d3a3b1edee42025d6c4e3888c168133b6"
+  },
+  {
+    "file": "icons/capabilities/skills.svg",
+    "sha256": "80dda9794c74b477d76bee1ec277b0fb983a063676de49f7eab86b76a030216e"
+  },
+  {
+    "file": "icons/capabilities/terminal-96.png",
+    "sha256": "2bb4e76133aa528e716d821e24fcf24893aba7ac378b34e01913eae59769db3d"
+  },
+  {
+    "file": "icons/capabilities/terminal.svg",
+    "sha256": "0b8af95fd19c66c062a02ba14fa63b9a2865122532e0551d84ee8b276a4a4e96"
+  },
+  {
+    "file": "review/adaptive-masks.png",
+    "sha256": "38fc6238107b03e5ee7f7c9988051c3ac2ff37561453be8e3ab136f0af3eec61"
+  },
+  {
+    "file": "review/mark-comparison.png",
+    "sha256": "07f1893b2f7e8f38fb1180790d574a146088c20990dcd57afaf2ad508566d586"
+  },
+  {
+    "file": "source/angel-ocean-background.svg",
+    "sha256": "1cbf0fd3e5823ebb40db74bd68ce7e7d04a789ca95f7c230b6caecec9ef76981"
+  },
+  {
+    "file": "source/angel-portrait-editable.svg",
+    "sha256": "602d38af77f90122be51c8f3e46d8b88f19d6e513bbef7db0f92c486361a47af"
+  },
+  {
+    "file": "source/angel-portrait-outlined.svg",
+    "sha256": "4ccf25a2053659f3fc1df01f8612f34656168523cf14fb65b434d87e6ba72a1a"
+  },
+  {
+    "file": "source/angel-square-editable.svg",
+    "sha256": "382be1e300cdd71362feeb7bfc7032677b3ef21413bafe393618c5754f99ce72"
+  },
+  {
+    "file": "source/angel-square-inference-editable.svg",
+    "sha256": "cfa92c5710aaf4c422922f834bfd4e1fc73c0d2a39ef7488b94b04e5d2449bda"
+  },
+  {
+    "file": "source/angel-square-inference-outlined.svg",
+    "sha256": "7cd4323720cbb2eef8c826a19854686e98be10e18b60f60d6e48a877058d972b"
+  },
+  {
+    "file": "source/angel-square-layered.ora",
+    "sha256": "1ec9cb6ddc868f8ce18b3494c7e6fa1fea4bb155118a09ed18fc144990188e0e"
+  },
+  {
+    "file": "source/angel-square-outlined.svg",
+    "sha256": "8b4dbdf801873b96beb97268017066840fef1058f3d5171f2de1a3a7c254a39c"
+  },
+  {
+    "file": "source/angel-square-thesis-editable.svg",
+    "sha256": "07dff0cfd0813ce0978cc946e09688bb095e512aef15a05e7b2562e08c2318ed"
+  },
+  {
+    "file": "source/angel-square-thesis-outlined.svg",
+    "sha256": "edbfe36bb325bae93a78bdf03875f67b342b5b15473bb25cf66d314673ae8a42"
+  },
+  {
+    "file": "source/angel-wide-editable.svg",
+    "sha256": "574c5c375c029ae66c6164be7a35033b1ab9ed38a20e50d97f0736366ae55c5c"
+  },
+  {
+    "file": "source/angel-wide-outlined.svg",
+    "sha256": "9925169ce01f33b180e798bb1f8e1809d896b655372feb23b66af504a7a72dd4"
+  },
+  {
+    "file": "source/particles/seven-1-editable.svg",
+    "sha256": "d9811151170d5104a4eac9287c4c0688ec3992729d626a36c8fac84a43867730"
+  },
+  {
+    "file": "source/particles/seven-1-outlined.svg",
+    "sha256": "298bca8e27fb2634fb23aef22e23fe1ada503f7a4eb0b1a06cf62ca25f5cefdf"
+  },
+  {
+    "file": "source/particles/seven-2-editable.svg",
+    "sha256": "c4dee49fb2fda0be67bd807e03b17001f4a6b5e7f786ef10f9f2753a721ed434"
+  },
+  {
+    "file": "source/particles/seven-2-outlined.svg",
+    "sha256": "d8a7ee8ef27a41409a1e02ab34a7fe8d975d3e5a371e3635a5666c09f5341291"
+  },
+  {
+    "file": "source/particles/seven-3-editable.svg",
+    "sha256": "faca7109d75cd6344454f7bd6c17c33c66423f0c28d3dc322c978762ddc8dad0"
+  },
+  {
+    "file": "source/particles/seven-3-outlined.svg",
+    "sha256": "b90533b3e55dbfa541e1a4af9f10191f5eb7c17127e74098bb0e0ca7c5d33381"
+  },
+  {
+    "file": "source/wordmarks/inference-editable.svg",
+    "sha256": "fa846d27403c9d0eab736d5f48bd53ad38b4af1ed34cc7bbbe9382449738457a"
+  },
+  {
+    "file": "source/wordmarks/inference-outlined.svg",
+    "sha256": "e5f71ae4f1767c91f9823161b92f6e7dd126178afcb444145100acab77d626b3"
+  },
+  {
+    "file": "source/wordmarks/synthesis-editable.svg",
+    "sha256": "7809f7c226b2ee20c2b544813380ee21b4ea096e4b835e2ecd1c4d6c6e2ebe71"
+  },
+  {
+    "file": "source/wordmarks/synthesis-outlined.svg",
+    "sha256": "04958217189339a3e68ef577416385b3cb95c6c8304faf3401eedb78c326549e"
+  },
+  {
+    "file": "source/wordmarks/thesis-editable.svg",
+    "sha256": "fef7205a2d9c3b51ff9d78393104ca90aeb4709105aa37f5070922efd8ab468e"
+  },
+  {
+    "file": "source/wordmarks/thesis-outlined.svg",
+    "sha256": "e818772002a324e46ee51c72673ad008b3edf8e4abd90b5f4df8a8cde9babb37"
+  }
+]

@@ -14,6 +14,8 @@ sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0" \
 ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease
 ```
 
+Before executing the wrapper, run `python3 scripts/verify-gradle-wrapper.py`. It checks both the JAR for the declared Gradle version and the distribution checksum pin against Gradle's published HTTPS checksums. CI and the signing helper perform this check automatically. When upgrading Gradle, regenerate and commit the JAR and both launch scripts as well as the properties file; changing only `distributionUrl` leaves the old bootstrap code in place.
+
 Release assembly is unsigned by default and needs no signing secrets. CI runs these checks; it does not sign or publish.
 
 ## Device tests

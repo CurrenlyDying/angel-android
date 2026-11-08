@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+- Regenerate the Gradle wrapper JAR and launch scripts with Gradle 9.6.0 to match the declared distribution. The previous JAR was the official 9.1.0 wrapper.
+- Verify the wrapper JAR and pinned distribution against Gradle's published checksums in CI before running Gradle.
+- Refresh the F-Droid recipe and release metadata. App features are unchanged from 1.1.
+
 ## 1.1
 
 - Projects group chats with their own Linux directory, distribution, instructions, skills and MCP connectors.

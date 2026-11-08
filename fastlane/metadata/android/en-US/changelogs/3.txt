@@ -1,0 +1,1 @@
+Fix the Gradle wrapper version mismatch reported during F-Droid review. The wrapper JAR and launch scripts now match Gradle 9.6.0, and CI verifies the official wrapper and distribution checksums. App features are unchanged from 1.1.

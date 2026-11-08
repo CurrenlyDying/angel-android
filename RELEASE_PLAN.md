@@ -1,4 +1,12 @@
-# Angel 1.1 release verification
+# Angel release verification
+
+## 1.1.1 packaging correction (2026-11-08)
+
+The bot in [RFP #4751](https://gitlab.com/fdroid/rfp/-/work_items/4751) correctly detected an official Gradle 9.1.0 wrapper JAR paired with a declared 9.6.0 distribution. The distribution SHA-256 pin was present. Regenerated the JAR and both launch scripts with Gradle 9.6.0; added official version-specific JAR/distribution verification before CI and signing builds. The new wrapper SHA-256 is `497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7`.
+
+App behavior and dependencies are unchanged; version 1.1.1/code 3 provides a new immutable source tag and APK for packaging. Current checks are recorded here when complete. The 1.1 device/native results below are historical coverage, not repeated 1.1.1 runs.
+
+## 1.1 stabilization record
 
 Updated 2026-11-07. This replaces the original exploratory checklist with observed release results and explicit remaining limits. Unperformed checks below are not claimed as passes.
 

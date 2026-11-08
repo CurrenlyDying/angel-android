@@ -1,8 +1,10 @@
 # F-Droid packaging draft
 
-`com.bruh.angel.yml` is a candidate fdroiddata metadata file. It is not a submission or evidence of inclusion. The `v1.1` tag and signed asset URL become valid when the reviewed release is published.
+`com.bruh.angel.yml` is a candidate fdroiddata metadata file for Angel 1.1.1 (code 3). Submission and publication are separate: the first packaging request was [RFP #4751](https://gitlab.com/fdroid/rfp/-/work_items/4751), submitted on 2026-11-07. A request is not evidence of inclusion. Current follow-up status is in `SUBMISSION.md` and `../RELEASE_PLAN.md`.
 
 The recipe requests ARM64 native compilation from the checked-in llama.cpp sources and the pinned Android toolchain. Upstream signing is configured with the verified 1.0 certificate so existing release installations can receive compatible updates. Final local independent binary matching and signature copying passed; dedicated F-Droid build-server verification remains part of review.
+
+The 1.1 request's bot correctly identified a Gradle 9.1.0 wrapper JAR alongside a declared 9.6.0 distribution. Version 1.1.1 regenerates the complete wrapper with 9.6.0. `python3 scripts/verify-gradle-wrapper.py` checks the official version-specific JAR and distribution hashes before CI/signing builds. The distribution checksum pin was already present in 1.1.
 
 Copy the YAML into `metadata/` in a current fdroiddata checkout. Run `fdroid readmeta`, `fdroid rewritemeta com.bruh.angel`, `fdroid lint com.bruh.angel`, source scanning and a full recipe build. Do not bypass scanner findings; inspect and resolve them.
 

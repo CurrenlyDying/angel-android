@@ -18,9 +18,9 @@ Repo: https://github.com/CurrenlyDying/angel-android.git
 Binaries: https://github.com/CurrenlyDying/angel-android/releases/download/v%v/angel-android-%v-release.apk
 
 Builds:
-  - versionName: '1.1'
-    versionCode: 2
-    commit: v1.1
+  - versionName: '1.1.1'
+    versionCode: 3
+    commit: v1.1.1
     subdir: app
     sudo: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0' 'cmake;4.1.2'
     gradle:
@@ -31,5 +31,5 @@ AllowedAPKSigningKeys: 773df628227f9ee4d2e24e7505f0f3b68a65b4eb97cafe467dcf366c5
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9].*
-CurrentVersion: '1.1'
-CurrentVersionCode: 2
+CurrentVersion: '1.1.1'
+CurrentVersionCode: 3

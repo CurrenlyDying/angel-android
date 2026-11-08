@@ -4,7 +4,13 @@
 
 The bot in [RFP #4751](https://gitlab.com/fdroid/rfp/-/work_items/4751) correctly detected an official Gradle 9.1.0 wrapper JAR paired with a declared 9.6.0 distribution. The distribution SHA-256 pin was present. Regenerated the JAR and both launch scripts with Gradle 9.6.0; added official version-specific JAR/distribution verification before CI and signing builds. The new wrapper SHA-256 is `497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7`.
 
-App behavior and dependencies are unchanged; version 1.1.1/code 3 provides a new immutable source tag and APK for packaging. Current checks are recorded here when complete. The 1.1 device/native results below are historical coverage, not repeated 1.1.1 runs.
+App behavior and dependencies are unchanged; version 1.1.1/code 3 provides a new immutable source tag and APK for packaging. [PR #2](https://github.com/CurrenlyDying/angel-android/pull/2) is merged and [v1.1.1](https://github.com/CurrenlyDying/angel-android/releases/tag/v1.1.1) is published with matching release/debug signing identities. The tag's source tree matches the merge commit. The 1.1 device/native results below are historical coverage, not repeated 1.1.1 runs.
+
+- [x] Official Gradle 9.6.0 wrapper/distribution hashes match. The guard rejects the old 9.1.0 JAR and an incorrect distribution pin.
+- [x] Fresh execution of all 76 JVM tests passes. Debug/test/release assembly passes; lint has zero errors, 53 warnings and two hints. Branch and PR Android CI passed.
+- [x] All 15 native libraries match the 1.1 release byte-for-byte; no app behavior or dependency changes.
+- [x] Full local F-Droid recipe run from the public v1.1.1 tag passes source/APK scans, comparison against the actual published APK, and allowed-signer verification. Independent unsigned SHA-256: `58d9505747c3ca7d2baa7583a9d830c5a2fb61a4f0716e89619719001f376c6c`. [Public report](https://github.com/CurrenlyDying/angel-android/releases/download/v1.1.1/FDROID-VERIFICATION-1.1.1.txt) records the installed toolchain, initial checkout setup and skipped sudo provisioning; this remains a local verification, not F-Droid's own build-server run.
+- [x] Closed original RFP #4751 as superseded and submitted [RFP #4762](https://gitlab.com/fdroid/rfp/-/work_items/4762) with the corrected release and reports. The submitting account has no Delete action on the original ticket. Maintainer review remains pending.
 
 ## 1.1 stabilization record
 
@@ -62,7 +68,7 @@ The owned APK was decoded by apktool; jadx emitted a readable MainActivity but r
 
 - Metadata, dependency/artwork licensing review, executable-download consent and proposed Anti-Features are in `fdroid/`.
 - [ ] Dedicated F-Droid build-server verification and maintainer review. A successful local recipe build does not complete this step.
-- [ ] Submit the packaging request/metadata after the public tag and signed asset exist.
+- [x] Submitted [RFP #4762](https://gitlab.com/fdroid/rfp/-/work_items/4762) for published 1.1.1; original #4751 is closed as superseded.
 - Development history is under three months. The existing release/users may support the established-user exception; only F-Droid maintainers can decide.
 
 References: [Inclusion Policy](https://f-droid.org/docs/Inclusion_Policy/), [submission guide](https://f-droid.org/docs/Submitting_to_F-Droid_Quick_Start_Guide/), [reproducible builds](https://f-droid.org/docs/Reproducible_Builds/).

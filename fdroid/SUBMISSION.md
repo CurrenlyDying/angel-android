@@ -1,6 +1,10 @@
 # Packaging submission and follow-up
 
-The first request, [RFP #4751](https://gitlab.com/fdroid/rfp/-/work_items/4751), was submitted through the official tracker on 2026-11-07. Its bot report identified a real wrapper-version mismatch: the official Gradle 9.1.0 JAR was retained while the distribution was pinned to 9.6.0. There was no maintainer rejection in the report reviewed on 2026-11-08. Version 1.1.1 corrects the wrapper and adds an official-checksum CI/signing check. Resubmission status will be recorded after publication.
+The active request is [RFP #4762](https://gitlab.com/fdroid/rfp/-/work_items/4762), submitted through Chrome on 2026-11-08 for published Angel 1.1.1. Maintainer review and F-Droid's own build-server verification remain pending.
+
+The first request, [RFP #4751](https://gitlab.com/fdroid/rfp/-/work_items/4751), was submitted on 2026-11-07. Its bot report identified a real wrapper-version mismatch: the official Gradle 9.1.0 JAR was retained while the distribution was pinned to 9.6.0. There was no maintainer rejection in the report reviewed on 2026-11-08. Version 1.1.1 corrects the wrapper and adds an official-checksum CI/signing check. The original request is closed as superseded; the submitting account has no Delete action on it. The new request links the original history.
+
+The [public verification report](https://github.com/CurrenlyDying/angel-android/releases/download/v1.1.1/FDROID-VERIFICATION-1.1.1.txt) records a successful local recipe run from the public tag, source/APK scans, comparison with the published reference APK, and allowed-signer verification. Fresh JVM tests and branch/PR CI also pass. The 1.0 release's public download counts (25 release APK, 11 debug APK as checked on 2026-11-08) are supplied as supporting eligibility evidence, not as unique-user counts.
 
 - Name: Angel
 - Application ID: `com.bruh.angel`

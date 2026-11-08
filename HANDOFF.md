@@ -1,4 +1,6 @@
-# Angel 1.1 continuation notes
+# Angel continuation notes
+
+Packaging follow-up 2026-11-08: [PR #2](https://github.com/CurrenlyDying/angel-android/pull/2) fixes the stale Gradle 9.1.0 wrapper JAR by regenerating the complete wrapper with the declared 9.6.0 version. CI/signing now verify the official version-specific JAR and distribution hashes. Published 1.1.1/code 3 retains the original signing keys; 76 fresh JVM tests, assembly, lint (zero errors), branch/PR CI and the full local public-tag F-Droid recipe/scans/reference comparison/signer verification pass. App behavior/dependencies are unchanged; all 15 native libraries match 1.1. The 1.1 device/native coverage below was not repeated for this build-only patch. Active [RFP #4762](https://gitlab.com/fdroid/rfp/-/work_items/4762) replaces closed #4751; the account could not delete the original. Maintainer/build-server review remains pending.
 
 Updated 2026-11-07. The stabilization work and owner-provided V2/SYNTHESIS identity are recorded in the PR and upstream release linked from RELEASE_PLAN.md. See `RELEASE_PLAN.md` for recorded results, explicit testing limits and external F-Droid steps; `BUILDING.md` for commands; and `fdroid/REVIEW.md` for packaging policy notes.
 

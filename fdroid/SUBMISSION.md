@@ -1,14 +1,14 @@
-# Packaging request preparation
+# Packaging submission and follow-up
 
-Use the official [Request for Packaging tracker](https://gitlab.com/fdroid/rfp/-/issues/new) or a dedicated fdroiddata merge request. This file is a draft to copy into the applicable current template; no request has been submitted by storing it here.
+The first request, [RFP #4751](https://gitlab.com/fdroid/rfp/-/work_items/4751), was submitted through the official tracker on 2026-11-07. Its bot report identified a real wrapper-version mismatch: the official Gradle 9.1.0 JAR was retained while the distribution was pinned to 9.6.0. There was no maintainer rejection in the report reviewed on 2026-11-08. Version 1.1.1 corrects the wrapper and adds an official-checksum CI/signing check. Resubmission status will be recorded after publication.
 
 - Name: Angel
 - Application ID: `com.bruh.angel`
 - Author/source: [CurrenlyDying/angel-android](https://github.com/CurrenlyDying/angel-android)
 - License: Unlicense; bundled dependency/artwork licenses and notices retained separately
 - Description: Native Android AI assistant with local GGUF inference, optional cloud providers, Shizuku tools, proot Linux environments, projects, skills and MCP connectors
-- Release source/tag: `v1.1` (version code 2)
-- Upstream binary: `https://github.com/CurrenlyDying/angel-android/releases/download/v1.1/angel-android-1.1-release.apk`
+- Release source/tag: `v1.1.1` (version code 3)
+- Upstream binary: `https://github.com/CurrenlyDying/angel-android/releases/download/v1.1.1/angel-android-1.1.1-release.apk`
 - Draft metadata: `fdroid/com.bruh.angel.yml`
 - Proposed Anti-Features: NonFreeNet (optional proprietary services), NonFreeAdd (restricted-license model suggestions)
 - Build: OpenJDK 21 / Gradle 9.6.0 / AGP 9.4.1 / SDK 37.0 / build-tools 36 / NDK 30.0.16248370 / CMake 4.1.2, ARM64-only, no IDE required

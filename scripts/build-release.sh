@@ -17,6 +17,7 @@ if [[ -n "${ANGEL_KEY_PASSWORD_FILE:-}" && "$ANGEL_KEY_PASSWORD_FILE" != "$ANGEL
 fi
 [[ -x "$task_signer" ]]
 cd "$task_root"
+python3 scripts/verify-gradle-wrapper.py
 ./gradlew :app:assembleRelease --console=plain --rerun-tasks -Pkotlin.incremental=false "$@"
 
 read -r task_version task_code < <(python3 - app/build/outputs/apk/release/output-metadata.json <<'PY'

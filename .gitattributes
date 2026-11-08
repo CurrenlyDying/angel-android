@@ -1,0 +1,2 @@
+# Keep the generated Windows wrapper in its native line endings on checkout.
+gradlew.bat text eol=crlf
